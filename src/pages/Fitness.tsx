@@ -645,6 +645,54 @@ function BestsCard({ workouts }: { workouts: Workout[] }) {
 // ---- routines ----
 const ROUTINE_EMOJI = ["💪", "🏋️", "🦵", "🏃", "🧘", "🤸", "🏊", "⚽"];
 
+// No-equipment calisthenics starter routines (a chair or wall is the
+// only "equipment" any of these need).
+const PREMADE: { name: string; emoji: string; exercises: string[] }[] = [
+  {
+    name: "Full body",
+    emoji: "💪",
+    exercises: ["Push-ups", "Squats", "Lunges", "Glute bridges", "Plank"],
+  },
+  {
+    name: "Upper body push",
+    emoji: "🙌",
+    exercises: ["Push-ups", "Pike push-ups", "Diamond push-ups", "Chair dips"],
+  },
+  {
+    name: "Legs & glutes",
+    emoji: "🦵",
+    exercises: [
+      "Squats",
+      "Reverse lunges",
+      "Split squats",
+      "Calf raises",
+      "Wall sit",
+    ],
+  },
+  {
+    name: "Core",
+    emoji: "🧱",
+    exercises: [
+      "Plank",
+      "Side plank",
+      "Leg raises",
+      "Crunches",
+      "Mountain climbers",
+    ],
+  },
+  {
+    name: "HIIT quickie",
+    emoji: "⚡",
+    exercises: [
+      "Jumping jacks",
+      "Burpees",
+      "High knees",
+      "Squat jumps",
+      "Mountain climbers",
+    ],
+  },
+];
+
 function AddRoutineForm() {
   const [name, setName] = useState("");
   const [emoji, setEmoji] = useState("💪");
@@ -737,6 +785,16 @@ function AddRoutineForm() {
 function RoutinesSection({ routines }: { routines: Routine[] }) {
   const [editing, setEditing] = useState(false);
 
+  const have = new Set(routines.map((r) => r.name.trim().toLowerCase()));
+  const available = PREMADE.filter((p) => !have.has(p.name.toLowerCase()));
+  const addPremade = (p: (typeof PREMADE)[number]) =>
+    db.routines.add({
+      id: uid(),
+      ...p,
+      createdAt: now(),
+      updatedAt: now(),
+    });
+
   return (
     <div>
       <div className="mb-2 flex items-center justify-between px-1">
@@ -751,12 +809,6 @@ function RoutinesSection({ routines }: { routines: Routine[] }) {
         </button>
       </div>
       <div className="space-y-2">
-        {routines.length === 0 && !editing && (
-          <p className="rounded-xl border border-dashed border-line px-3.5 py-4 text-center text-sm text-muted">
-            No routines yet — tap Edit to build one (e.g. Push day with bench
-            press and shoulder press).
-          </p>
-        )}
         {routines.map((r) => (
           <div
             key={r.id}
@@ -780,6 +832,37 @@ function RoutinesSection({ routines }: { routines: Routine[] }) {
             )}
           </div>
         ))}
+        {(editing || routines.length === 0) && available.length > 0 && (
+          <div className="rounded-xl border border-dashed border-line p-3.5">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted">
+              Premade · no equipment needed
+            </p>
+            <div className="mt-2 space-y-2">
+              {available.map((p) => (
+                <div key={p.name} className="flex items-center gap-3">
+                  <span className="text-lg">{p.emoji}</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm">{p.name}</p>
+                    <p className="truncate text-xs text-muted">
+                      {p.exercises.join(" · ")}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => addPremade(p)}
+                    aria-label={`Add ${p.name} routine`}
+                    className="shrink-0 rounded-full bg-accent-soft px-3 py-1.5 text-xs font-medium text-accent"
+                  >
+                    + Add
+                  </button>
+                </div>
+              ))}
+            </div>
+            <p className="mt-3 text-xs leading-relaxed text-muted">
+              Tip: leave the weight box empty for bodyweight moves, and for
+              holds like planks put the seconds in the reps box.
+            </p>
+          </div>
+        )}
         {editing && <AddRoutineForm />}
       </div>
     </div>
