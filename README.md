@@ -1,0 +1,75 @@
+# Lifetime
+
+Your personal hub for lists, tasks, time and money. Built as a Progressive Web
+App: it runs in any browser and installs to your phone's home screen like a
+native app. All data is stored on your device — no account, no sign-up.
+
+## Getting it live (no coding required)
+
+1. **Create a GitHub account** at github.com if you don't have one.
+2. **Create a new repository** — click the "+" (top right) → "New repository".
+   Name it `lifetime`, keep it Private, and tick "Add a README" so the repo
+   isn't empty. Click Create.
+3. **Upload these files** — in your new repo, click "Add file" → "Upload
+   files". Drag in everything from this folder (you can drag the folders like
+   `src` and `public` straight in). Click "Commit changes".
+4. **Create a Vercel account** at vercel.com — choose "Continue with GitHub".
+5. **Import the project** — on Vercel, click "Add New… → Project", pick your
+   `lifetime` repo, and click Deploy. Vercel detects Vite automatically.
+6. After a minute you'll get a URL like `lifetime-xyz.vercel.app`. Open it on
+   your phone.
+7. **Install it**: on iPhone, tap Share → "Add to Home Screen". On Android,
+   tap the menu → "Add to Home screen" / "Install app".
+
+From now on, any change committed to the GitHub repo redeploys automatically.
+
+## Roadmap
+
+- **Phase 1 — Lists** ✅ shopping and general checklists
+- **Phase 2 — Tasks** ✅ priorities, recurring to-dos, day planner
+- **Phase 3 — Calendar** ✅ month view, events, day agenda
+- **Phase 4 — Budget** ✅ monthly budgets, spending by category, trends
+- **Phase 5 — Backup & reminders** ✅ backup/restore file, push reminders
+  (needs the two free add-ons below)
+- **Phase 6 — Fitness** ✅ gym workouts & routines, cardio, weight trend,
+  weekly activity goal & streaks
+- **Later** cross-device sync, habits, meal planning, dashboard
+
+## Turning on event reminders (10 minutes, all free)
+
+Reminders need a tiny bit of server help so notifications arrive even when
+the app is closed. Only reminder titles and times ever leave your device.
+Two one-off setups:
+
+**1. Give the app somewhere to store reminder times (Upstash, free):**
+
+1. Open your project on vercel.com → **Storage** tab → **Create Database**.
+2. Choose **Upstash** → **Redis**, pick the free plan, accept the defaults,
+   and connect it to the project. That's it — no settings to copy.
+3. Redeploy once (Deployments → ⋯ on the latest → Redeploy) so the app picks
+   it up.
+
+**2. Give the app a heartbeat (cron-job.org, free):**
+
+1. Create a free account at cron-job.org.
+2. Create a new cron job with the URL
+   `https://YOUR-APP.vercel.app/api/cron` (use your real app address),
+   running **every 5 minutes**.
+3. Save. The first run may say `no-vapid-yet` — that fixes itself the first
+   time you turn reminders on in the app.
+
+Then on each phone/device: open the installed app → **Settings → Turn on
+reminders** (on iPhone the app must be added to the Home Screen first), and
+give new calendar events a reminder time.
+
+## For developers (or Claude)
+
+```
+npm install     # once
+npm run dev     # local development
+npm run build   # production build (output in dist/)
+```
+
+Stack: Vite · React · TypeScript · Tailwind CSS v4 · Dexie (IndexedDB) ·
+vite-plugin-pwa. All records use UUID keys + timestamps so a sync layer can be
+added later without migration pain.

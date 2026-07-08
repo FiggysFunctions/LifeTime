@@ -1,0 +1,86 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ---------- Theme tokens ---------- */
+:root {
+  --bg: #f4f5f7;
+  --surface: #ffffff;
+  --surface-2: #eceef1;
+  --ink: #1a2028;
+  --muted: #626d7a;
+  --line: #e2e5ea;
+  --accent: #0f9d8f;
+}
+
+.dark {
+  --bg: #101418;
+  --surface: #181e25;
+  --surface-2: #212933;
+  --ink: #edf1f5;
+  --muted: #98a4b1;
+  --line: #29323d;
+}
+
+/* ---------- Accent palettes ---------- */
+[data-accent="lagoon"] { --accent: #0f9d8f; }
+.dark[data-accent="lagoon"] { --accent: #2dd4bf; }
+
+[data-accent="violet"] { --accent: #7c5cd6; }
+.dark[data-accent="violet"] { --accent: #a78bfa; }
+
+[data-accent="coral"] { --accent: #e35d6a; }
+.dark[data-accent="coral"] { --accent: #f4808b; }
+
+[data-accent="honey"] { --accent: #c07f10; }
+.dark[data-accent="honey"] { --accent: #f0b03f; }
+
+[data-accent="sky"] { --accent: #2f7fd6; }
+.dark[data-accent="sky"] { --accent: #67aef5; }
+
+[data-accent="moss"] { --accent: #4d8f3f; }
+.dark[data-accent="moss"] { --accent: #82c46f; }
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --font-display: "Sora", ui-sans-serif, system-ui, sans-serif;
+  --font-body: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    sans-serif;
+}
+
+/* ---------- Base ---------- */
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Soft accent tint utility (uses color-mix so it adapts to any accent) */
+@utility bg-accent-soft {
+  background-color: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+@utility border-accent-soft {
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+}
