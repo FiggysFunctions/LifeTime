@@ -18,6 +18,7 @@ import db, {
 } from "../db";
 import { toDateStr, todayStr, addDays, dueLabel, nextOccurrence } from "../dates";
 import { fmtMoney, parseAmount } from "../money";
+import { syncReminders } from "../reminders";
 import { useSettings } from "../settings";
 import { PageHeader, Card, Button, Chip } from "../components/ui";
 
@@ -110,11 +111,13 @@ async function settleBill(
       updatedAt: now(),
     });
   }
-  if (bill.frequency === "once") return db.bills.delete(bill.id);
-  return db.bills.update(bill.id, {
-    due: nextOccurrence(bill.due, bill.frequency),
-    updatedAt: now(),
-  });
+  if (bill.frequency === "once") await db.bills.delete(bill.id);
+  else
+    await db.bills.update(bill.id, {
+      due: nextOccurrence(bill.due, bill.frequency),
+      updatedAt: now(),
+    });
+  syncReminders();
 }
 
 function UpcomingBillRow({
@@ -256,9 +259,11 @@ function BillEditRow({ bill }: { bill: Bill }) {
   const { settings } = useSettings();
   const [amount, setAmount] = useState(String(bill.amount));
 
-  const saveAmount = () => {
+  const saveAmount = async () => {
     const n = parseAmount(amount);
-    if (n !== null) db.bills.update(bill.id, { amount: n, updatedAt: now() });
+    if (n === null) return;
+    await db.bills.update(bill.id, { amount: n, updatedAt: now() });
+    syncReminders();
   };
 
   return (
@@ -282,13 +287,15 @@ function BillEditRow({ bill }: { bill: Bill }) {
         value={bill.due}
         onChange={(e) =>
           e.target.value &&
-          db.bills.update(bill.id, { due: e.target.value, updatedAt: now() })
+          db.bills
+            .update(bill.id, { due: e.target.value, updatedAt: now() })
+            .then(() => syncReminders())
         }
         aria-label={`Next due date for ${bill.name}`}
         className="rounded-lg border border-line bg-bg px-1.5 py-1.5 text-xs text-muted outline-none focus:border-accent"
       />
       <button
-        onClick={() => db.bills.delete(bill.id)}
+        onClick={() => db.bills.delete(bill.id).then(() => syncReminders())}
         aria-label={`Delete ${bill.name}`}
         className="p-1 text-muted hover:text-red-500"
       >
@@ -323,6 +330,7 @@ function AddBillForm({ categories }: { categories: Category[] }) {
     });
     setName("");
     setAmount("");
+    syncReminders();
   };
 
   return (

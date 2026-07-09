@@ -1,5 +1,6 @@
 import db from "./db";
-import { timeLabel } from "./dates";
+import { timeLabel, addDays } from "./dates";
+import { fmtMoney } from "./money";
 
 // Push reminders need a server to send them while the phone is locked.
 // Only reminder titles and times are uploaded — never lists, tasks or money.
@@ -76,16 +77,24 @@ export async function disableReminders() {
   }).catch(() => {});
 }
 
-// Upload the next 60 days of reminders. Called on app start and whenever
-// events change; offline failures are silent — the next call retries.
+// 9:00 local on the given day — when bill reminders arrive.
+function nineAm(dateStr: string): number {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(y, m - 1, d, 9, 0).getTime();
+}
+
+// Upload the next 60 days of reminders (calendar events + bills). Called
+// on app start and whenever either changes; offline failures are silent —
+// the next call retries.
 export async function syncReminders() {
   if (reminderStatus() !== "on") return;
   try {
     const sub = await getSubscription(false);
     if (!sub) return;
     const nowMs = Date.now();
+
     const events = await db.events.toArray();
-    const reminders = events
+    const eventReminders = events
       .filter((e) => e.time && e.reminderMins != null)
       .map((e) => {
         const [y, m, d] = e.date.split("-").map(Number);
@@ -100,8 +109,34 @@ export async function syncReminders() {
               ? `Now · ${timeLabel(e.time!)}`
               : `At ${timeLabel(e.time!)}`,
           at,
+          url: "/#/calendar",
         };
-      })
+      });
+
+    // Bills: 9am the day before it's due, or 9am on the day if that
+    // moment has already passed (e.g. the bill was added late).
+    let currency = "£";
+    try {
+      currency =
+        JSON.parse(localStorage.getItem("lifetime-settings") || "{}")
+          .currency || "£";
+    } catch {
+      // unreadable settings — keep the default
+    }
+    const bills = await db.bills.toArray();
+    const billReminders = bills.map((b) => {
+      const dayBefore = nineAm(addDays(b.due, -1));
+      const at = dayBefore > nowMs ? dayBefore : nineAm(b.due);
+      return {
+        id: `bill-${b.id}-${b.due}`,
+        title: `${b.name} due ${dayBefore > nowMs ? "tomorrow" : "today"}`,
+        body: `${b.emoji} ${fmtMoney(b.amount, currency)} — tap to mark it paid`,
+        at,
+        url: "/#/budget",
+      };
+    });
+
+    const reminders = [...eventReminders, ...billReminders]
       .filter((r) => r.at > nowMs - 60_000 && r.at < nowMs + 60 * 86_400_000)
       .sort((a, b) => a.at - b.at)
       .slice(0, 100);

@@ -48,7 +48,7 @@ export default async function handler(req, res) {
               title: item.title,
               body: item.body,
               tag: item.id,
-              url: "/#/calendar",
+              url: item.url || "/#/calendar",
             })
           );
           sent++;

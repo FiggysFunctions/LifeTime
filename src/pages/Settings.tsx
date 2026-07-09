@@ -43,7 +43,7 @@ function RemindersCard() {
   return (
     <Card>
       <p className="flex items-center gap-2 text-sm font-medium">
-        <BellRing size={15} className="text-accent" /> Event reminders
+        <BellRing size={15} className="text-accent" /> Reminders
       </p>
       {status === "unsupported" ? (
         <p className="mt-1.5 text-sm leading-relaxed text-muted">
@@ -60,8 +60,8 @@ function RemindersCard() {
         <>
           <p className="mt-1.5 text-sm leading-relaxed text-muted">
             {status === "on"
-              ? "Reminders are on for this device. Events with a reminder will notify you even when the app is closed."
-              : "Get notified about calendar events at the time you choose. Only reminder titles and times leave this device — never your lists, tasks or spending."}
+              ? "Reminders are on for this device: calendar events at the time you choose, and bills at 9am the day before they're due — even when the app is closed."
+              : "Get notified about calendar events at the time you choose, and bills at 9am the day before they're due. Only reminder titles, amounts and times leave this device — never your lists, tasks or spending history."}
           </p>
           <div className="mt-3">
             {status === "on" ? (

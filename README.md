@@ -60,8 +60,9 @@ Two one-off setups:
    time you turn reminders on in the app.
 
 Then on each phone/device: open the installed app → **Settings → Turn on
-reminders** (on iPhone the app must be added to the Home Screen first), and
-give new calendar events a reminder time.
+reminders** (on iPhone the app must be added to the Home Screen first).
+Calendar events notify at the time you pick on the event; bills notify at
+9am the day before they're due, automatically.
 
 ## For developers (or Claude)
 

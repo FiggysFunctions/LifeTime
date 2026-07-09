@@ -23,10 +23,15 @@ export default async function handler(req, res) {
   const clean = reminders
     .slice(0, 200)
     .map((x) => ({
-      id: String(x.id).slice(0, 64),
+      id: String(x.id).slice(0, 80),
       title: String(x.title ?? "Reminder").slice(0, 120),
       body: String(x.body ?? "").slice(0, 120),
       at: Number(x.at),
+      // in-app path only (e.g. "/#/budget") — anything else is dropped
+      url:
+        typeof x.url === "string" && x.url.startsWith("/")
+          ? x.url.slice(0, 64)
+          : undefined,
     }))
     .filter((x) => Number.isFinite(x.at));
 
