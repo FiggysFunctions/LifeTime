@@ -8,6 +8,7 @@ const TABLES = [
   "events",
   "categories",
   "expenses",
+  "bills",
   "routines",
   "workouts",
   "cardio",

@@ -25,12 +25,12 @@ export const addMonths = (dateStr: string, n: number) => {
   return toDateStr(dt);
 };
 
-// Next due date after completing a recurring task: step forward from the
-// old due date until we land past today, so an overdue weekly task jumps
-// to its next real occurrence rather than another date in the past.
+// Next due date after completing a recurring task or paying a bill:
+// step forward from the old due date until we land past today, so an
+// overdue item jumps to its next real occurrence, not a date in the past.
 export function nextOccurrence(
   due: string,
-  recurrence: Exclude<Recurrence, "none">
+  recurrence: Exclude<Recurrence, "none"> | "yearly"
 ): string {
   const today = todayStr();
   let next = due;
@@ -40,7 +40,9 @@ export function nextOccurrence(
         ? addDays(next, 1)
         : recurrence === "weekly"
           ? addDays(next, 7)
-          : addMonths(next, 1);
+          : recurrence === "monthly"
+            ? addMonths(next, 1)
+            : addMonths(next, 12);
   } while (next <= today);
   return next;
 }

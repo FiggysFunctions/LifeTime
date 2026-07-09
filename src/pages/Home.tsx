@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import { ListChecks, CheckSquare, CalendarDays, PiggyBank, Dumbbell, ArrowRight } from "lucide-react";
 import db from "../db";
-import { todayStr } from "../dates";
+import { todayStr, addDays } from "../dates";
 import { fmtMoney } from "../money";
 import { useSettings } from "../settings";
 import { PageHeader, Card, Button } from "../components/ui";
@@ -109,6 +109,18 @@ export default function Home() {
     [],
     0
   );
+  const billsSoon = useLiveQuery(
+    async () => {
+      const soon = addDays(todayStr(), 7);
+      const due = (await db.bills.toArray()).filter((b) => b.due <= soon);
+      return {
+        count: due.length,
+        total: due.reduce((s, b) => s + b.amount, 0),
+      };
+    },
+    [],
+    { count: 0, total: 0 }
+  );
   const spentMonth = useLiveQuery(async () => {
     const ym = todayStr().slice(0, 7);
     const list = await db.expenses
@@ -157,6 +169,22 @@ export default function Home() {
               </p>
               <p className="text-sm text-muted">
                 {eventsToday === 1 ? "event" : "events"} in today's calendar
+              </p>
+            </div>
+            <ArrowRight size={18} className="text-muted" />
+          </Card>
+        </Link>
+      )}
+
+      {billsSoon.count > 0 && (
+        <Link to="/budget" className="block">
+          <Card className="flex items-center justify-between transition-colors hover:border-accent-soft">
+            <div>
+              <p className="font-display text-2xl font-semibold text-accent">
+                {fmtMoney(billsSoon.total, settings.currency)}
+              </p>
+              <p className="text-sm text-muted">
+                {billsSoon.count === 1 ? "bill" : "bills"} due within a week
               </p>
             </div>
             <ArrowRight size={18} className="text-muted" />

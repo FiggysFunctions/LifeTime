@@ -64,6 +64,20 @@ export interface Expense {
   updatedAt: number;
 }
 
+export type BillFrequency = "once" | "weekly" | "monthly" | "yearly";
+
+export interface Bill {
+  id: string;
+  name: string;
+  emoji: string;
+  amount: number; // expected amount; editable when marking paid
+  categoryId: string | null; // where payments get logged; null = auto "Bills"
+  frequency: BillFrequency;
+  due: string; // next due date, local "YYYY-MM-DD"
+  createdAt: number;
+  updatedAt: number;
+}
+
 // --- Fitness (Phase 6) ---
 // All stored values are metric (kg, km); the UI converts for display.
 
@@ -124,6 +138,7 @@ const db = new Dexie("lifetime") as Dexie & {
   events: EntityTable<CalEvent, "id">;
   categories: EntityTable<Category, "id">;
   expenses: EntityTable<Expense, "id">;
+  bills: EntityTable<Bill, "id">;
   routines: EntityTable<Routine, "id">;
   workouts: EntityTable<Workout, "id">;
   cardio: EntityTable<Cardio, "id">;
@@ -160,6 +175,11 @@ db.version(5).stores({
   cardio: "id, date, createdAt",
   measurements: "id, date, createdAt",
   activity: "id, date, createdAt",
+});
+
+// v6 — budget rework: recurring bills & upcoming expenses.
+db.version(6).stores({
+  bills: "id, due, createdAt",
 });
 
 export const uid = () => crypto.randomUUID();

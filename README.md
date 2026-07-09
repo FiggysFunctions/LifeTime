@@ -28,7 +28,8 @@ From now on, any change committed to the GitHub repo redeploys automatically.
 - **Phase 1 — Lists** ✅ shopping and general checklists
 - **Phase 2 — Tasks** ✅ priorities, recurring to-dos, day planner
 - **Phase 3 — Calendar** ✅ month view, events, day agenda
-- **Phase 4 — Budget** ✅ monthly budgets, spending by category, trends
+- **Phase 4 — Budget** ✅ monthly budgets, spending by category, trends,
+  recurring bills & upcoming expenses
 - **Phase 5 — Backup & reminders** ✅ backup/restore file, push reminders
   (needs the two free add-ons below)
 - **Phase 6 — Fitness** ✅ gym workouts & routines, cardio, weight trend,
