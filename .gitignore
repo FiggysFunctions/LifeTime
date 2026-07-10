@@ -5,3 +5,5 @@ dev-dist
 *.local
 tsconfig.tsbuildinfo
 .claude/
+dexie-cloud.json
+dexie-cloud.key

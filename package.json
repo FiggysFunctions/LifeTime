@@ -12,13 +12,14 @@
   "license": "ISC",
   "dependencies": {
     "@upstash/redis": "^1.35.0",
-    "web-push": "^3.6.7",
     "dexie": "^4.4.4",
+    "dexie-cloud-addon": "^4.4.13",
     "dexie-react-hooks": "^4.4.0",
     "lucide-react": "^1.23.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "react-router-dom": "^7.18.1"
+    "react-router-dom": "^7.18.1",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.2",

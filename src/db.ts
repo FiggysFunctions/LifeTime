@@ -1,4 +1,6 @@
 import Dexie, { type EntityTable } from "dexie";
+import dexieCloud from "dexie-cloud-addon";
+import { DEXIE_CLOUD_URL } from "./sync-config";
 
 // Every record uses a string UUID and carries timestamps.
 // This makes adding cross-device sync painless in a later phase.
@@ -147,7 +149,7 @@ export interface HabitTick {
   updatedAt: number;
 }
 
-const db = new Dexie("lifetime") as Dexie & {
+const db = new Dexie("lifetime", { addons: [dexieCloud] }) as Dexie & {
   lists: EntityTable<List, "id">;
   items: EntityTable<ListItem, "id">;
   tasks: EntityTable<Task, "id">;
@@ -205,6 +207,19 @@ db.version(7).stores({
   habits: "id, createdAt",
   habitTicks: "id, habitId, date, createdAt",
 });
+
+// v8 — sync: gives dexie-cloud-addon a fresh version to attach its
+// internal tables to (avoids Dexie's SchemaDiff warning/workaround).
+db.version(8).stores({});
+
+// Sync is opt-in: without a database URL (or before signing in) the app
+// is exactly as local-only as it always was.
+if (DEXIE_CLOUD_URL) {
+  db.cloud.configure({
+    databaseUrl: DEXIE_CLOUD_URL,
+    requireAuth: false,
+  });
+}
 
 export const uid = () => crypto.randomUUID();
 export const now = () => Date.now();

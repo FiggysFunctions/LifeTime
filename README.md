@@ -38,7 +38,18 @@ From now on, any change committed to the GitHub repo redeploys automatically.
   app-icon shortcuts, backup nudges
 - **Phase 8 — Habits** ✅ daily habit ticks with streaks, right on the
   dashboard
-- **Later** cross-device sync, meal planning, global search
+- **Phase 9 — Sync** ✅ optional cross-device sync (Dexie Cloud)
+- **Later** meal planning, global search
+
+## Sync
+
+Sync is optional and off by default — the app works fully on-device
+without it. To use Lifetime on several devices (or protect against a
+lost phone): **Settings → Sync → Turn on sync**, enter your email, and
+type the one-time code it sends you. Do the same on each device with
+the same email and everything stays in step automatically. Signing out
+is safe: data stays in your cloud account and returns when you sign
+back in. The free tier covers up to 3 people.
 
 ## Turning on event reminders (10 minutes, all free)
 

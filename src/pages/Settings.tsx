@@ -1,6 +1,16 @@
 import { useRef, useState } from "react";
-import { Sun, Moon, MonitorSmartphone, Download, Upload, BellRing } from "lucide-react";
+import {
+  Sun,
+  Moon,
+  MonitorSmartphone,
+  Download,
+  Upload,
+  BellRing,
+  Cloud,
+} from "lucide-react";
+import { useObservable } from "dexie-react-hooks";
 import db from "../db";
+import { DEXIE_CLOUD_URL } from "../sync-config";
 import { useSettings, ACCENTS, CURRENCIES, type ThemeMode } from "../settings";
 import { exportBackup, importBackup } from "../backup";
 import {
@@ -10,6 +20,78 @@ import {
   type ReminderStatus,
 } from "../reminders";
 import { PageHeader, Card, Button } from "../components/ui";
+
+const SYNC_PHRASES: Record<string, string> = {
+  "in-sync": "All changes synced ✓",
+  pushing: "Syncing…",
+  pulling: "Syncing…",
+  initial: "Connecting…",
+  offline: "Offline — will catch up when you're back online",
+  error: "Sync hit a problem — it will keep retrying",
+};
+
+function SyncCardInner() {
+  const user = useObservable(db.cloud.currentUser);
+  const syncState = useObservable(db.cloud.syncState);
+  const loggedIn = !!user?.isLoggedIn;
+
+  return (
+    <Card>
+      <p className="flex items-center gap-2 text-sm font-medium">
+        <Cloud size={15} className="text-accent" /> Sync
+      </p>
+      {loggedIn ? (
+        <>
+          <p className="mt-1.5 text-sm leading-relaxed text-muted">
+            Signed in as <strong>{user?.email ?? user?.userId}</strong>. Your
+            data syncs automatically between every device signed in with this
+            email.
+          </p>
+          <p className="mt-1.5 text-xs text-muted">
+            {SYNC_PHRASES[syncState?.phase ?? "initial"] ?? syncState?.phase}
+          </p>
+          <div className="mt-3">
+            <Button variant="ghost" onClick={() => db.cloud.logout()}>
+              Sign out
+            </Button>
+          </div>
+          <p className="mt-2 text-xs text-muted">
+            Signing out is safe — your data stays in the cloud and returns
+            when you sign back in.
+          </p>
+        </>
+      ) : (
+        <>
+          <p className="mt-1.5 text-sm leading-relaxed text-muted">
+            Use Lifetime on more than one device, and keep everything safe if
+            this one is lost. Enter your email, type the code it sends you —
+            that's the whole login. Everything already on this device comes
+            with you.
+          </p>
+          <div className="mt-3">
+            <Button onClick={() => db.cloud.login()}>Turn on sync</Button>
+          </div>
+        </>
+      )}
+    </Card>
+  );
+}
+
+function SyncCard() {
+  if (!DEXIE_CLOUD_URL)
+    return (
+      <Card>
+        <p className="flex items-center gap-2 text-sm font-medium">
+          <Cloud size={15} className="text-accent" /> Sync
+        </p>
+        <p className="mt-1.5 text-sm leading-relaxed text-muted">
+          Cross-device sync isn't switched on in this version yet — your data
+          stays on this device (use Backup below to move or protect it).
+        </p>
+      </Card>
+    );
+  return <SyncCardInner />;
+}
 
 function RemindersCard() {
   const [status, setStatus] = useState<ReminderStatus>(reminderStatus);
@@ -217,6 +299,8 @@ export default function Settings() {
         </div>
       </Card>
 
+      <SyncCard />
+
       <RemindersCard />
 
       <Card>
@@ -276,8 +360,9 @@ export default function Settings() {
       <Card>
         <p className="text-sm font-medium">Your data</p>
         <p className="mt-1.5 text-sm leading-relaxed text-muted">
-          Everything is stored on this device only — nothing is sent anywhere
-          (reminders, if turned on, share just their titles and times).
+          Your data lives on this device (plus, if you turn on sync, in your
+          own synced account). Reminders, if enabled, share just their titles
+          and times.
         </p>
         <div className="mt-3">
           {confirmErase ? (
