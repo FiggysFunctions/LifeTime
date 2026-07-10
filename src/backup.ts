@@ -37,6 +37,7 @@ export async function exportBackup() {
   a.download = `lifetime-backup-${todayStr()}.json`;
   a.click();
   URL.revokeObjectURL(url);
+  localStorage.setItem("lifetime-last-backup", String(Date.now()));
 }
 
 // Replaces everything with the backup's contents. Throws on files that

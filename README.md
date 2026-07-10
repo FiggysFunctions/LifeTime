@@ -34,7 +34,9 @@ From now on, any change committed to the GitHub repo redeploys automatically.
   (needs the two free add-ons below)
 - **Phase 6 — Fitness** ✅ gym workouts & routines, cardio, weight trend,
   weekly activity goal & streaks
-- **Later** cross-device sync, habits, meal planning, dashboard
+- **Phase 7 — Today dashboard** ✅ unified daily view on Home, quick add,
+  app-icon shortcuts, backup nudges
+- **Later** cross-device sync, habits, meal planning, global search
 
 ## Turning on event reminders (10 minutes, all free)
 

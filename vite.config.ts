@@ -21,6 +21,23 @@ export default defineConfig({
         background_color: "#101418",
         display: "standalone",
         start_url: "/",
+        shortcuts: [
+          {
+            name: "New task",
+            url: "/#/tasks?new=1",
+            icons: [{ src: "/icons/icon-192.png", sizes: "192x192" }],
+          },
+          {
+            name: "Log expense",
+            url: "/#/budget?new=1",
+            icons: [{ src: "/icons/icon-192.png", sizes: "192x192" }],
+          },
+          {
+            name: "Log workout",
+            url: "/#/fitness",
+            icons: [{ src: "/icons/icon-192.png", sizes: "192x192" }],
+          },
+        ],
         icons: [
           { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
           { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },

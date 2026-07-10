@@ -1,23 +1,16 @@
 import { useState, type ReactNode } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Plus, Check, X, Repeat, Flag, CheckSquare } from "lucide-react";
 import db, { uid, now, type Task, type Priority, type Recurrence } from "../db";
-import { todayStr, addDays, nextOccurrence, dueLabel } from "../dates";
+import { todayStr, addDays, dueLabel } from "../dates";
+import {
+  completeTask,
+  PRIORITY_WEIGHT,
+  PRIORITY_FLAG as FLAG_COLOR,
+  PRIORITY_RING as RING_COLOR,
+} from "../actions";
 import { PageHeader, Card, Button } from "../components/ui";
-
-const PRIORITY_WEIGHT: Record<Priority, number> = { high: 0, medium: 1, low: 2 };
-
-const FLAG_COLOR: Record<Priority, string> = {
-  high: "text-red-500 dark:text-red-400",
-  medium: "text-amber-500 dark:text-amber-400",
-  low: "text-sky-500 dark:text-sky-400",
-};
-
-const RING_COLOR: Record<Priority, string> = {
-  high: "border-red-400/70",
-  medium: "border-amber-400/70",
-  low: "border-line",
-};
 
 function Chip({
   active,
@@ -147,20 +140,7 @@ function NewTaskForm({ onDone }: { onDone: () => void }) {
 function TaskRow({ task }: { task: Task }) {
   const overdue = !task.done && task.due !== null && task.due < todayStr();
 
-  const complete = () => {
-    // completing a recurring task rolls it forward instead of finishing it
-    if (task.recurrence !== "none" && task.due) {
-      return db.tasks.update(task.id, {
-        due: nextOccurrence(task.due, task.recurrence),
-        updatedAt: now(),
-      });
-    }
-    return db.tasks.update(task.id, {
-      done: true,
-      completedAt: now(),
-      updatedAt: now(),
-    });
-  };
+  const complete = () => completeTask(task);
 
   return (
     <li className="group flex items-center gap-3 rounded-xl border border-line bg-surface px-3.5 py-3">
@@ -221,7 +201,9 @@ function Section({
 }
 
 export default function Tasks() {
-  const [creating, setCreating] = useState(false);
+  // ?new=1 (from the app-icon shortcut) opens the form straight away
+  const [params] = useSearchParams();
+  const [creating, setCreating] = useState(params.get("new") === "1");
   const tasks = useLiveQuery(() => db.tasks.toArray(), []);
 
   const today = todayStr();

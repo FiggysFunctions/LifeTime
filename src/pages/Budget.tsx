@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import {
   ChevronLeft,
@@ -768,7 +769,9 @@ function TrendChart({
 
 export default function Budget() {
   const { settings } = useSettings();
-  const [creating, setCreating] = useState(false);
+  // ?new=1 (from the app-icon shortcut) opens the expense form straight away
+  const [params] = useSearchParams();
+  const [creating, setCreating] = useState(params.get("new") === "1");
   const [editing, setEditing] = useState(false);
   const [view, setView] = useState(() => {
     const d = new Date();

@@ -298,7 +298,7 @@ export default function Settings() {
       </Card>
 
       <p className="pt-2 text-center text-xs text-muted">
-        Lifetime v0.6 · Lists, Tasks, Calendar, Budget & Fitness
+        Lifetime v0.7 · Lists, Tasks, Calendar, Budget & Fitness
       </p>
     </div>
   );
