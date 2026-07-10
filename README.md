@@ -39,6 +39,9 @@ From now on, any change committed to the GitHub repo redeploys automatically.
 - **Phase 8 — Habits** ✅ daily habit ticks with streaks, right on the
   dashboard
 - **Phase 9 — Sync** ✅ optional cross-device sync (Dexie Cloud)
+- **Phase 10 — Sports** ✅ upcoming fixtures for NRL, NRLW, AFL, F1 & UFC —
+  spoiler-free by design (games vanish at kick-off; scores never leave the
+  server)
 - **Later** meal planning, global search
 
 ## Sync

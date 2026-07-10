@@ -7,6 +7,7 @@ import {
   CalendarDays,
   PiggyBank,
   Dumbbell,
+  Trophy,
   Flag,
   Flame,
   Check,
@@ -662,6 +663,12 @@ export default function Home() {
         weekActive > 0
           ? `${weekActive} of ${goal} days this week`
           : "Workouts & health",
+    },
+    {
+      to: "/sports",
+      icon: Trophy,
+      label: "Sports",
+      desc: "Fixtures, no spoilers",
     },
   ];
 
