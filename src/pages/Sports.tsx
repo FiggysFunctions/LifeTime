@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
-import { RefreshCw, Trophy } from "lucide-react";
-import { toDateStr, dueLabel, timeLabel } from "../dates";
+import { useLiveQuery } from "dexie-react-hooks";
+import { RefreshCw, Trophy, CalendarPlus, Check, Bell } from "lucide-react";
+import db, { uid, now } from "../db";
+import { toDateStr, todayStr, dueLabel, timeLabel } from "../dates";
+import { syncReminders } from "../reminders";
 import { PageHeader, Button, Chip } from "../components/ui";
 
 // Fixtures come from /api/fixtures, which only ever returns events that
@@ -36,12 +39,96 @@ function readCache(): { at: number; fixtures: Fixture[] } | null {
 
 const emojiFor = (l: string) => LEAGUES.find((x) => x.key === l)?.emoji ?? "🏆";
 
-const localTime = (ms: number) => {
+const localHHMM = (ms: number) => {
   const d = new Date(ms);
-  return timeLabel(
-    `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`
-  );
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 };
+
+const localTime = (ms: number) => timeLabel(localHHMM(ms));
+
+const REMINDER_OPTIONS: { value: number | null; label: string }[] = [
+  { value: null, label: "No reminder" },
+  { value: 0, label: "At kick-off" },
+  { value: 10, label: "10 min before" },
+  { value: 30, label: "30 min before" },
+  { value: 60, label: "1 hr before" },
+];
+
+function FixtureRow({ f, inCalendar }: { f: Fixture; inCalendar: boolean }) {
+  const [open, setOpen] = useState(false);
+  const [reminder, setReminder] = useState<number | null>(30);
+
+  const add = async () => {
+    const d = new Date(f.start);
+    await db.events.add({
+      id: uid(),
+      title: `${emojiFor(f.league)} ${f.title}`,
+      date: toDateStr(d),
+      time: localHHMM(f.start),
+      reminderMins: reminder,
+      createdAt: now(),
+      updatedAt: now(),
+    });
+    syncReminders();
+    setOpen(false);
+  };
+
+  return (
+    <li className="rounded-xl border border-line bg-surface px-3.5 py-3">
+      <div className="flex items-center gap-3">
+        <span className="text-lg">{emojiFor(f.league)}</span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm">{f.title}</p>
+          <p className="truncate text-xs text-muted">
+            {f.league}
+            {f.detail ? ` · ${f.detail}` : ""}
+          </p>
+        </div>
+        <span className="shrink-0 text-sm font-medium text-accent">
+          {localTime(f.start)}
+        </span>
+        {inCalendar ? (
+          <span
+            title="In your calendar"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-accent-soft text-accent"
+          >
+            <Check size={15} strokeWidth={3} />
+          </span>
+        ) : (
+          <button
+            onClick={() => setOpen(!open)}
+            aria-label={`Add ${f.title} to calendar`}
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-muted transition-colors hover:bg-accent-soft hover:text-accent"
+          >
+            <CalendarPlus size={17} />
+          </button>
+        )}
+      </div>
+      {open && !inCalendar && (
+        <div className="mt-2.5 border-t border-line pt-2.5">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Bell size={13} className="text-muted" />
+            {REMINDER_OPTIONS.map((o) => (
+              <Chip
+                key={String(o.value)}
+                active={reminder === o.value}
+                onClick={() => setReminder(o.value)}
+              >
+                {o.label}
+              </Chip>
+            ))}
+          </div>
+          <div className="mt-2.5 flex gap-2">
+            <Button onClick={add}>Add to calendar</Button>
+            <Button variant="ghost" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
+    </li>
+  );
+}
 
 export default function Sports() {
   const [fixtures, setFixtures] = useState<Fixture[] | null>(
@@ -81,9 +168,21 @@ export default function Sports() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const now = Date.now();
+  // future calendar events, to mark fixtures that are already added
+  const calEvents = useLiveQuery(
+    () => db.events.filter((e) => e.date >= todayStr()).toArray(),
+    [],
+    []
+  );
+  const inCalendar = (f: Fixture) =>
+    calEvents.some(
+      (e) =>
+        e.date === toDateStr(new Date(f.start)) && e.title.includes(f.title)
+    );
+
+  const nowMs = Date.now();
   const upcoming = (fixtures ?? []).filter(
-    (f) => f.start > now && (!filter || f.league === filter)
+    (f) => f.start > nowMs && (!filter || f.league === filter)
   );
 
   const groups: { date: string; items: Fixture[] }[] = [];
@@ -157,22 +256,7 @@ export default function Sports() {
           </p>
           <ul className="space-y-2">
             {g.items.map((f) => (
-              <li
-                key={f.id}
-                className="flex items-center gap-3 rounded-xl border border-line bg-surface px-3.5 py-3"
-              >
-                <span className="text-lg">{emojiFor(f.league)}</span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm">{f.title}</p>
-                  <p className="truncate text-xs text-muted">
-                    {f.league}
-                    {f.detail ? ` · ${f.detail}` : ""}
-                  </p>
-                </div>
-                <span className="shrink-0 text-sm font-medium text-accent">
-                  {localTime(f.start)}
-                </span>
-              </li>
+              <FixtureRow key={f.id} f={f} inCalendar={inCalendar(f)} />
             ))}
           </ul>
         </div>
