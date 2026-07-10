@@ -14,6 +14,8 @@ const TABLES = [
   "cardio",
   "measurements",
   "activity",
+  "habits",
+  "habitTicks",
 ] as const;
 
 const SETTINGS_KEY = "lifetime-settings";

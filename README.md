@@ -36,7 +36,9 @@ From now on, any change committed to the GitHub repo redeploys automatically.
   weekly activity goal & streaks
 - **Phase 7 — Today dashboard** ✅ unified daily view on Home, quick add,
   app-icon shortcuts, backup nudges
-- **Later** cross-device sync, habits, meal planning, global search
+- **Phase 8 — Habits** ✅ daily habit ticks with streaks, right on the
+  dashboard
+- **Later** cross-device sync, meal planning, global search
 
 ## Turning on event reminders (10 minutes, all free)
 

@@ -8,9 +8,13 @@ import {
   PiggyBank,
   Dumbbell,
   Flag,
+  Flame,
+  Check,
+  Pencil,
+  X,
   Download,
 } from "lucide-react";
-import db, { uid, now } from "../db";
+import db, { uid, now, type Habit } from "../db";
 import { todayStr, addDays, timeLabel, dueLabel } from "../dates";
 import { fmtMoney, parseAmount } from "../money";
 import {
@@ -267,6 +271,215 @@ function QuickAdd() {
           )}
         </Card>
       )}
+    </div>
+  );
+}
+
+const HABIT_EMOJI = ["💧", "📖", "🧘", "💊", "🚶", "🏃", "🌙", "🥗", "🧹", "✍️"];
+
+const SUGGESTED_HABITS = [
+  { name: "Drink water", emoji: "💧" },
+  { name: "Read", emoji: "📖" },
+  { name: "Stretch", emoji: "🧘" },
+  { name: "Take vitamins", emoji: "💊" },
+  { name: "Daily walk", emoji: "🚶" },
+  { name: "Early night", emoji: "🌙" },
+];
+
+// Consecutive ticked days ending today — an unticked today doesn't break
+// the streak yet, it just doesn't count.
+function habitStreak(dates: Set<string>, today: string): number {
+  let s = 0;
+  let d = dates.has(today) ? today : addDays(today, -1);
+  while (dates.has(d) && s < 1000) {
+    s++;
+    d = addDays(d, -1);
+  }
+  return s;
+}
+
+function AddHabitForm({ existing }: { existing: string[] }) {
+  const [name, setName] = useState("");
+  const [emoji, setEmoji] = useState("💧");
+  const have = new Set(existing.map((n) => n.trim().toLowerCase()));
+  const suggestions = SUGGESTED_HABITS.filter(
+    (s) => !have.has(s.name.toLowerCase())
+  );
+
+  const add = async (n: string, e: string) => {
+    if (!n.trim()) return;
+    await db.habits.add({
+      id: uid(),
+      name: n.trim(),
+      emoji: e,
+      createdAt: now(),
+      updatedAt: now(),
+    });
+    setName("");
+  };
+
+  return (
+    <div className="space-y-2.5 rounded-xl border border-dashed border-line p-3.5">
+      {suggestions.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {suggestions.map((s) => (
+            <Chip
+              key={s.name}
+              active={false}
+              onClick={() => add(s.name, s.emoji)}
+            >
+              + {s.emoji} {s.name}
+            </Chip>
+          ))}
+        </div>
+      )}
+      <div className="flex flex-wrap gap-1.5">
+        {HABIT_EMOJI.map((e) => (
+          <button
+            key={e}
+            onClick={() => setEmoji(e)}
+            aria-label={`Choose ${e}`}
+            className={`rounded-lg p-1 text-base transition-colors ${
+              emoji === e
+                ? "bg-accent-soft ring-1 ring-accent/50"
+                : "hover:bg-surface-2"
+            }`}
+          >
+            {e}
+          </button>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && add(name, emoji)}
+          placeholder="Or your own — e.g. Practise guitar"
+          className={quickInputCls}
+        />
+        <Button onClick={() => add(name, emoji)}>Add</Button>
+      </div>
+    </div>
+  );
+}
+
+function HabitsSection() {
+  const [editing, setEditing] = useState(false);
+  const habits = useLiveQuery(
+    () => db.habits.orderBy("createdAt").toArray(),
+    [],
+    []
+  );
+  const ticks = useLiveQuery(() => db.habitTicks.toArray(), [], []);
+  const today = todayStr();
+  const last7 = Array.from({ length: 7 }, (_, i) => addDays(today, i - 6));
+
+  const byHabit = new Map<string, Set<string>>();
+  ticks.forEach((t) => {
+    if (!byHabit.has(t.habitId)) byHabit.set(t.habitId, new Set());
+    byHabit.get(t.habitId)!.add(t.date);
+  });
+
+  const toggle = async (habitId: string, done: boolean) => {
+    if (done) {
+      const t = ticks.find((x) => x.habitId === habitId && x.date === today);
+      if (t) await db.habitTicks.delete(t.id);
+    } else {
+      await db.habitTicks.add({
+        id: uid(),
+        habitId,
+        date: today,
+        createdAt: now(),
+        updatedAt: now(),
+      });
+    }
+  };
+
+  const remove = async (h: Habit) => {
+    await db.habitTicks.where("habitId").equals(h.id).delete();
+    await db.habits.delete(h.id);
+  };
+
+  if (habits.length === 0 && !editing)
+    return (
+      <button
+        onClick={() => setEditing(true)}
+        className="w-full rounded-2xl border border-dashed border-line bg-surface px-4 py-4 text-sm text-muted transition-colors hover:border-accent-soft"
+      >
+        🔥 Build a daily habit — tap to add your first
+      </button>
+    );
+
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between px-1">
+        <p className="text-xs font-medium uppercase tracking-wide text-muted">
+          Habits
+        </p>
+        <button
+          onClick={() => setEditing(!editing)}
+          className="flex items-center gap-1 text-xs text-muted underline-offset-2 hover:underline"
+        >
+          <Pencil size={12} /> {editing ? "Done" : "Edit"}
+        </button>
+      </div>
+      <div className="space-y-2">
+        {habits.map((h) => {
+          const dates = byHabit.get(h.id) ?? new Set<string>();
+          const done = dates.has(today);
+          const streak = habitStreak(dates, today);
+          return (
+            <div
+              key={h.id}
+              className="flex items-center gap-3 rounded-xl border border-line bg-surface px-3.5 py-2.5"
+            >
+              <button
+                onClick={() => toggle(h.id, done)}
+                aria-label={`${done ? "Untick" : "Tick"} ${h.name}`}
+                className={
+                  done
+                    ? "grid h-6 w-6 shrink-0 place-items-center rounded-full bg-accent text-white dark:text-bg"
+                    : "grid h-6 w-6 shrink-0 place-items-center rounded-full border-2 border-line transition-colors hover:border-accent"
+                }
+              >
+                {done && <Check size={14} strokeWidth={3} />}
+              </button>
+              <span className="min-w-0 flex-1 truncate text-sm">
+                {h.emoji} {h.name}
+              </span>
+              {editing ? (
+                <button
+                  onClick={() => remove(h)}
+                  aria-label={`Delete ${h.name}`}
+                  className="p-1 text-muted hover:text-red-500"
+                >
+                  <X size={16} />
+                </button>
+              ) : (
+                <>
+                  <span className="flex shrink-0 gap-1" aria-hidden="true">
+                    {last7.map((d) => (
+                      <span
+                        key={d}
+                        className={`h-1.5 w-1.5 rounded-full ${
+                          dates.has(d) ? "bg-accent" : "bg-surface-2"
+                        }`}
+                      />
+                    ))}
+                  </span>
+                  {streak >= 2 && (
+                    <span className="flex shrink-0 items-center gap-0.5 text-xs font-medium text-accent">
+                      <Flame size={12} />
+                      {streak}
+                    </span>
+                  )}
+                </>
+              )}
+            </div>
+          );
+        })}
+        {editing && <AddHabitForm existing={habits.map((h) => h.name)} />}
+      </div>
     </div>
   );
 }
@@ -543,6 +756,8 @@ export default function Home() {
           )}
         </div>
       </div>
+
+      <HabitsSection />
 
       <QuickAdd />
 

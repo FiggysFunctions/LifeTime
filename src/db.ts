@@ -131,6 +131,22 @@ export interface ActivityMark {
   updatedAt: number;
 }
 
+export interface Habit {
+  id: string;
+  name: string;
+  emoji: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface HabitTick {
+  id: string;
+  habitId: string;
+  date: string; // local "YYYY-MM-DD"
+  createdAt: number;
+  updatedAt: number;
+}
+
 const db = new Dexie("lifetime") as Dexie & {
   lists: EntityTable<List, "id">;
   items: EntityTable<ListItem, "id">;
@@ -144,6 +160,8 @@ const db = new Dexie("lifetime") as Dexie & {
   cardio: EntityTable<Cardio, "id">;
   measurements: EntityTable<Measurement, "id">;
   activity: EntityTable<ActivityMark, "id">;
+  habits: EntityTable<Habit, "id">;
+  habitTicks: EntityTable<HabitTick, "id">;
 };
 
 db.version(1).stores({
@@ -180,6 +198,12 @@ db.version(5).stores({
 // v6 — budget rework: recurring bills & upcoming expenses.
 db.version(6).stores({
   bills: "id, due, createdAt",
+});
+
+// v7 — Phase 8: daily habits.
+db.version(7).stores({
+  habits: "id, createdAt",
+  habitTicks: "id, habitId, date, createdAt",
 });
 
 export const uid = () => crypto.randomUUID();
