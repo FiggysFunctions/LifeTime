@@ -7,10 +7,16 @@ import {
   Upload,
   BellRing,
   Cloud,
+  Users,
 } from "lucide-react";
-import { useObservable } from "dexie-react-hooks";
+import { useObservable, useLiveQuery } from "dexie-react-hooks";
 import db from "../db";
 import { DEXIE_CLOUD_URL } from "../sync-config";
+import {
+  getHouseholdRealmId,
+  createHousehold,
+  moveSharedModulesToHousehold,
+} from "../household";
 import { useSettings, ACCENTS, CURRENCIES, type ThemeMode } from "../settings";
 import { exportBackup, importBackup } from "../backup";
 import {
@@ -73,6 +79,125 @@ function SyncCardInner() {
           </div>
         </>
       )}
+    </Card>
+  );
+}
+
+function HouseholdCard() {
+  const user = useObservable(db.cloud.currentUser);
+  const loggedIn = !!user?.isLoggedIn;
+  const [email, setEmail] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  const household = useLiveQuery(
+    async () => {
+      const rid = await getHouseholdRealmId();
+      if (!rid) return null;
+      const members = await db.members.where("realmId").equals(rid).toArray();
+      return { rid, members };
+    },
+    [],
+    null
+  );
+
+  const invite = async () => {
+    const e = email.trim().toLowerCase();
+    if (!/\S+@\S+\.\S+/.test(e)) {
+      setMsg("That doesn't look like an email address.");
+      return;
+    }
+    setBusy(true);
+    setMsg("");
+    try {
+      await createHousehold(e);
+      setMsg(`Invite sent to ${e} — they accept from the email, then sign into Lifetime with that address.`);
+      setEmail("");
+    } catch {
+      setMsg("Couldn't send the invite — check your connection and try again.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Card>
+      <p className="flex items-center gap-2 text-sm font-medium">
+        <Users size={15} className="text-accent" /> Household
+      </p>
+      {!loggedIn ? (
+        <p className="mt-1.5 text-sm leading-relaxed text-muted">
+          Share the calendar, meal planning and chosen lists with your other
+          half. Turn on sync above first — sharing rides on it.
+        </p>
+      ) : household ? (
+        <>
+          <p className="mt-1.5 text-sm leading-relaxed text-muted">
+            Your calendar, meals and any lists you share are visible to
+            everyone in the household. Tasks, budget, fitness and habits stay
+            personal.
+          </p>
+          <ul className="mt-2.5 space-y-1.5">
+            {household.members.map((m) => (
+              <li
+                key={m.id}
+                className="flex items-baseline justify-between gap-3 text-sm"
+              >
+                <span className="min-w-0 flex-1 truncate">{m.email}</span>
+                <span className="shrink-0 text-xs text-muted">
+                  {m.accepted ? "member" : "invited"}
+                </span>
+              </li>
+            ))}
+            {household.members.length === 0 && (
+              <li className="text-sm text-muted">Just you so far.</li>
+            )}
+          </ul>
+          <div className="mt-3 flex gap-2">
+            <input
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && invite()}
+              placeholder="Invite by email"
+              inputMode="email"
+              className="min-w-0 flex-1 rounded-xl border border-line bg-bg px-3.5 py-2.5 text-sm outline-none placeholder:text-muted focus:border-accent"
+            />
+            <Button onClick={invite}>{busy ? "Sending…" : "Invite"}</Button>
+          </div>
+          <button
+            onClick={async () => {
+              await moveSharedModulesToHousehold(household.rid);
+              setMsg("Your calendar and meals are now in the household. ✓");
+            }}
+            className="mt-2.5 text-xs text-muted underline-offset-2 hover:underline"
+          >
+            Merge my calendar & meals into the household
+          </button>
+        </>
+      ) : (
+        <>
+          <p className="mt-1.5 text-sm leading-relaxed text-muted">
+            Share with your other half: one calendar, one meal plan, and any
+            shopping lists you choose — updated live on both phones. Tasks,
+            budget, fitness and habits stay personal. Enter their email to
+            set it up (the free plan covers 3 people).
+          </p>
+          <div className="mt-3 flex gap-2">
+            <input
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && invite()}
+              placeholder="their@email.com"
+              inputMode="email"
+              className="min-w-0 flex-1 rounded-xl border border-line bg-bg px-3.5 py-2.5 text-sm outline-none placeholder:text-muted focus:border-accent"
+            />
+            <Button onClick={invite}>
+              {busy ? "Setting up…" : "Create household"}
+            </Button>
+          </div>
+        </>
+      )}
+      {msg && <p className="mt-2 text-sm text-muted">{msg}</p>}
     </Card>
   );
 }
@@ -300,6 +425,8 @@ export default function Settings() {
       </Card>
 
       <SyncCard />
+
+      <HouseholdCard />
 
       <RemindersCard />
 

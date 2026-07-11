@@ -4,6 +4,7 @@ import { RefreshCw, Trophy, CalendarPlus, Check, Bell } from "lucide-react";
 import db, { uid, now } from "../db";
 import { toDateStr, todayStr, dueLabel, timeLabel } from "../dates";
 import { syncReminders } from "../reminders";
+import { getHouseholdRealmId } from "../household";
 import { PageHeader, Button, Chip } from "../components/ui";
 
 // Fixtures come from /api/fixtures, which only ever returns events that
@@ -66,6 +67,7 @@ function FixtureRow({ f, inCalendar }: { f: Fixture; inCalendar: boolean }) {
       date: toDateStr(d),
       time: localHHMM(f.start),
       reminderMins: reminder,
+      realmId: await getHouseholdRealmId(),
       createdAt: now(),
       updatedAt: now(),
     });

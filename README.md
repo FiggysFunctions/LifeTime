@@ -46,6 +46,9 @@ From now on, any change committed to the GitHub repo redeploys automatically.
   ingredients to any shopping list in one tap (the copies are independent —
   editing one never touches the other)
 - **Phase 12 — Search** ✅ one box that finds anything across the whole app
+- **Phase 13 — Household sharing** ✅ share the calendar, meals and chosen
+  lists with your other half (Settings → Household); tasks, budget,
+  fitness and habits stay personal to each account
 
 ## Sync
 

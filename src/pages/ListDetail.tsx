@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
-import { ArrowLeft, Plus, Trash2, Check, X } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Check, X, Users } from "lucide-react";
 import db, { uid, now } from "../db";
+import { getHouseholdRealmId, setListShared } from "../household";
 import { Button, Card } from "../components/ui";
 
 export default function ListDetail() {
@@ -19,6 +20,7 @@ export default function ListDetail() {
     () => (id ? db.items.where("listId").equals(id).sortBy("createdAt") : []),
     [id]
   );
+  const householdId = useLiveQuery(() => getHouseholdRealmId(), [], undefined);
 
   if (list === undefined) return null; // loading
   if (list === null || !id)
@@ -42,6 +44,7 @@ export default function ListDetail() {
       listId: id,
       text: t,
       done: false,
+      realmId: list.realmId, // items live wherever their list lives
       createdAt: now(),
       updatedAt: now(),
     });
@@ -75,6 +78,30 @@ export default function ListDetail() {
           <span>{list.emoji}</span>
           <span className="truncate">{list.name}</span>
         </h1>
+        {householdId && (
+          <button
+            onClick={() =>
+              setListShared(id, list.realmId !== householdId)
+            }
+            aria-label={
+              list.realmId === householdId
+                ? `Stop sharing ${list.name} with the household`
+                : `Share ${list.name} with the household`
+            }
+            title={
+              list.realmId === householdId
+                ? "Shared with household — tap to make private"
+                : "Private — tap to share with household"
+            }
+            className={`rounded-full p-2 transition-colors ${
+              list.realmId === householdId
+                ? "bg-accent-soft text-accent"
+                : "text-muted hover:bg-surface-2 hover:text-ink"
+            }`}
+          >
+            <Users size={18} />
+          </button>
+        )}
         <button
           onClick={() => setConfirmDelete(true)}
           aria-label="Delete list"

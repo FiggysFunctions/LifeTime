@@ -27,6 +27,7 @@ import {
   PRIORITY_WEIGHT,
 } from "../actions";
 import { exportBackup } from "../backup";
+import { getHouseholdRealmId } from "../household";
 import { useSettings } from "../settings";
 import { PageHeader, Card, Button, Chip } from "../components/ui";
 
@@ -144,6 +145,7 @@ function QuickAdd() {
       date: todayStr(),
       time: time || null,
       reminderMins: null,
+      realmId: await getHouseholdRealmId(),
       createdAt: now(),
       updatedAt: now(),
     });

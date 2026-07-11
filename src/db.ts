@@ -9,6 +9,7 @@ export interface List {
   id: string;
   name: string;
   emoji: string;
+  realmId?: string; // household realm when shared; absent = private
   createdAt: number;
   updatedAt: number;
 }
@@ -18,6 +19,7 @@ export interface ListItem {
   listId: string;
   text: string;
   done: boolean;
+  realmId?: string;
   createdAt: number;
   updatedAt: number;
 }
@@ -43,6 +45,7 @@ export interface CalEvent {
   date: string; // local date "YYYY-MM-DD"
   time: string | null; // 24h "HH:MM"; null = all-day
   reminderMins?: number | null; // minutes before start; 0 = at time, null/absent = none
+  realmId?: string; // household realm when sharing is on
   createdAt: number;
   updatedAt: number;
 }
@@ -154,6 +157,7 @@ export interface Meal {
   name: string;
   emoji: string;
   ingredients: string[];
+  realmId?: string;
   createdAt: number;
   updatedAt: number;
 }
@@ -162,6 +166,7 @@ export interface MealPlan {
   id: string;
   date: string; // local "YYYY-MM-DD"
   mealId: string;
+  realmId?: string;
   createdAt: number;
   updatedAt: number;
 }
@@ -248,5 +253,9 @@ if (DEXIE_CLOUD_URL) {
 
 export const uid = () => crypto.randomUUID();
 export const now = () => Date.now();
+
+// Dev-only handle for driving the app database from the browser console
+// during verification. Never present in production builds.
+if (import.meta.env.DEV) (window as unknown as { db: unknown }).db = db;
 
 export default db;

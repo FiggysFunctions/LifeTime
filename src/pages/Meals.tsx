@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import db, { uid, now, type Meal, type MealPlan } from "../db";
 import { todayStr, addDays } from "../dates";
+import { getHouseholdRealmId } from "../household";
 import { PageHeader, Button, Chip } from "../components/ui";
 
 // Meals and Lists stay independent: "add to list" copies ingredient names
@@ -192,6 +193,7 @@ function AddMealForm({ existing }: { existing: string[] }) {
       name: n.trim(),
       emoji: e,
       ingredients: ings,
+      realmId: await getHouseholdRealmId(),
       createdAt: now(),
       updatedAt: now(),
     });
@@ -290,6 +292,7 @@ function DayRow({
       id: uid(),
       date,
       mealId,
+      realmId: await getHouseholdRealmId(),
       createdAt: now(),
       updatedAt: now(),
     });
