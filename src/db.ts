@@ -149,6 +149,23 @@ export interface HabitTick {
   updatedAt: number;
 }
 
+export interface Meal {
+  id: string;
+  name: string;
+  emoji: string;
+  ingredients: string[];
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface MealPlan {
+  id: string;
+  date: string; // local "YYYY-MM-DD"
+  mealId: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
 const db = new Dexie("lifetime", { addons: [dexieCloud] }) as Dexie & {
   lists: EntityTable<List, "id">;
   items: EntityTable<ListItem, "id">;
@@ -164,6 +181,8 @@ const db = new Dexie("lifetime", { addons: [dexieCloud] }) as Dexie & {
   activity: EntityTable<ActivityMark, "id">;
   habits: EntityTable<Habit, "id">;
   habitTicks: EntityTable<HabitTick, "id">;
+  meals: EntityTable<Meal, "id">;
+  mealPlans: EntityTable<MealPlan, "id">;
 };
 
 db.version(1).stores({
@@ -211,6 +230,12 @@ db.version(7).stores({
 // v8 — sync: gives dexie-cloud-addon a fresh version to attach its
 // internal tables to (avoids Dexie's SchemaDiff warning/workaround).
 db.version(8).stores({});
+
+// v9 — Phase 11: meal planning.
+db.version(9).stores({
+  meals: "id, createdAt",
+  mealPlans: "id, date, mealId, createdAt",
+});
 
 // Sync is opt-in: without a database URL (or before signing in) the app
 // is exactly as local-only as it always was.

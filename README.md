@@ -42,7 +42,10 @@ From now on, any change committed to the GitHub repo redeploys automatically.
 - **Phase 10 — Sports** ✅ upcoming fixtures for NRL, NRLW, AFL, F1 & UFC —
   spoiler-free by design (games vanish at kick-off; scores never leave the
   server)
-- **Later** meal planning, global search
+- **Phase 11 — Meals** ✅ week meal planner + meal library; sends
+  ingredients to any shopping list in one tap (the copies are independent —
+  editing one never touches the other)
+- **Later** global search
 
 ## Sync
 

@@ -8,6 +8,7 @@ import {
   PiggyBank,
   Dumbbell,
   Trophy,
+  UtensilsCrossed,
   Flag,
   Flame,
   Check,
@@ -580,6 +581,23 @@ export default function Home() {
     [],
     0
   );
+  const mealsToday = useLiveQuery(
+    async () => {
+      const plans = await db.mealPlans
+        .where("date")
+        .equals(todayStr())
+        .toArray();
+      if (plans.length === 0) return [];
+      const meals = await db.meals.toArray();
+      const byId = new Map(meals.map((m) => [m.id, m]));
+      return plans
+        .sort((a, b) => a.createdAt - b.createdAt)
+        .map((p) => byId.get(p.mealId))
+        .filter((m) => m !== undefined);
+    },
+    [],
+    []
+  );
   const weekActive = useLiveQuery(
     async () => {
       const monday = addDays(todayStr(), -((new Date().getDay() + 6) % 7));
@@ -618,7 +636,8 @@ export default function Home() {
   const todayEmpty =
     sortedEvents.length === 0 &&
     sortedTasks.length === 0 &&
-    billsDueNow.length === 0;
+    billsDueNow.length === 0 &&
+    mealsToday.length === 0;
 
   const goal = Math.min(Math.max(settings.weeklyGoal || 3, 1), 7);
   const modules = [
@@ -669,6 +688,15 @@ export default function Home() {
       icon: Trophy,
       label: "Sports",
       desc: "Fixtures, no spoilers",
+    },
+    {
+      to: "/meals",
+      icon: UtensilsCrossed,
+      label: "Meals",
+      desc:
+        mealsToday.length > 0
+          ? `Tonight: ${mealsToday[0]!.name}`
+          : "Plan the week",
     },
   ];
 
@@ -753,6 +781,19 @@ export default function Home() {
               </span>
               <span className="shrink-0 text-sm font-medium">
                 {fmtMoney(b.amount, settings.currency)}
+              </span>
+            </Link>
+          ))}
+          {mealsToday.map((m) => (
+            <Link
+              key={m!.id}
+              to="/meals"
+              className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2"
+            >
+              <span className="text-lg">{m!.emoji}</span>
+              <span className="min-w-0 flex-1 truncate text-sm">{m!.name}</span>
+              <span className="shrink-0 text-xs font-medium text-muted">
+                Tonight
               </span>
             </Link>
           ))}

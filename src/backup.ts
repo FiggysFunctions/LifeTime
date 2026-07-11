@@ -16,6 +16,8 @@ const TABLES = [
   "activity",
   "habits",
   "habitTicks",
+  "meals",
+  "mealPlans",
 ] as const;
 
 const SETTINGS_KEY = "lifetime-settings";

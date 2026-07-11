@@ -383,7 +383,7 @@ export default function Settings() {
       </Card>
 
       <p className="pt-2 text-center text-xs text-muted">
-        Lifetime v0.8 · Lists, Tasks, Calendar, Budget, Fitness & Habits
+        Lifetime v1.0 · your whole life, one app
       </p>
     </div>
   );
