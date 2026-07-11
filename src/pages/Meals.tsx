@@ -17,28 +17,30 @@ import { PageHeader, Button, Chip } from "../components/ui";
 // into ordinary list items (skipping ones already there) and that's the end
 // of the relationship — changes on either side never touch the other.
 
-const MEAL_EMOJI = ["🍝", "🌮", "🍛", "🍕", "🥗", "🍲", "🍳", "🥪", "🍜", "🐟"];
+const MEAL_EMOJI = ["🍝", "🌮", "🍛", "🍕", "🥗", "🍲", "🍳", "🍤", "🍜", "🐟"];
 
+// Suggestions stick to chicken and seafood — the only proteins on the
+// menu in this household.
 const SUGGESTED_MEALS: { name: string; emoji: string; ingredients: string[] }[] = [
   {
-    name: "Spag bol",
+    name: "Chicken pasta",
     emoji: "🍝",
-    ingredients: ["Spaghetti", "Beef mince", "Passata", "Onion", "Garlic", "Parmesan"],
+    ingredients: ["Penne", "Chicken breast", "Passata", "Onion", "Garlic", "Parmesan"],
   },
   {
-    name: "Tacos",
+    name: "Fish tacos",
     emoji: "🌮",
-    ingredients: ["Taco shells", "Beef mince", "Lettuce", "Tomato", "Cheese", "Salsa"],
+    ingredients: ["Taco shells", "White fish fillets", "Slaw mix", "Lime", "Sour cream"],
   },
   {
-    name: "Stir fry",
+    name: "Chicken stir fry",
     emoji: "🍜",
     ingredients: ["Chicken breast", "Stir fry veg", "Noodles", "Soy sauce", "Garlic"],
   },
   {
-    name: "Homemade pizza",
+    name: "Chicken pizza",
     emoji: "🍕",
-    ingredients: ["Pizza bases", "Passata", "Mozzarella", "Ham", "Mushrooms"],
+    ingredients: ["Pizza bases", "Passata", "Mozzarella", "Chicken breast", "Mushrooms"],
   },
   {
     name: "Chicken salad",
@@ -46,9 +48,19 @@ const SUGGESTED_MEALS: { name: string; emoji: string; ingredients: string[] }[] 
     ingredients: ["Chicken breast", "Lettuce", "Cucumber", "Tomato", "Feta"],
   },
   {
-    name: "Curry",
+    name: "Chicken curry",
     emoji: "🍛",
     ingredients: ["Chicken thighs", "Curry paste", "Coconut milk", "Rice", "Onion"],
+  },
+  {
+    name: "Salmon & veg",
+    emoji: "🐟",
+    ingredients: ["Salmon fillets", "Baby potatoes", "Broccoli", "Lemon"],
+  },
+  {
+    name: "Garlic prawn pasta",
+    emoji: "🍤",
+    ingredients: ["Spaghetti", "Prawns", "Garlic", "Cream", "Parsley", "Parmesan"],
   },
 ];
 
