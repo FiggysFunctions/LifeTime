@@ -6,6 +6,7 @@ import {
   CalendarDays,
   PiggyBank,
   Dumbbell,
+  Search,
   Settings,
 } from "lucide-react";
 
@@ -64,6 +65,7 @@ export default function Shell() {
           ))}
         </nav>
         <div className="mt-auto">
+          <Tab to="/search" label="Search" icon={Search} sidebar />
           <Tab to="/settings" label="Settings" icon={Settings} sidebar />
         </div>
       </aside>

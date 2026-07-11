@@ -11,6 +11,7 @@ import Budget from "./pages/Budget";
 import Fitness from "./pages/Fitness";
 import Sports from "./pages/Sports";
 import Meals from "./pages/Meals";
+import Search from "./pages/Search";
 import Settings from "./pages/Settings";
 
 export default function App() {
@@ -32,6 +33,7 @@ export default function App() {
           <Route path="/fitness" element={<Fitness />} />
           <Route path="/sports" element={<Sports />} />
           <Route path="/meals" element={<Meals />} />
+          <Route path="/search" element={<Search />} />
           <Route path="/settings" element={<Settings />} />
         </Route>
       </Routes>

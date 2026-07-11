@@ -45,7 +45,7 @@ From now on, any change committed to the GitHub repo redeploys automatically.
 - **Phase 11 — Meals** ✅ week meal planner + meal library; sends
   ingredients to any shopping list in one tap (the copies are independent —
   editing one never touches the other)
-- **Later** global search
+- **Phase 12 — Search** ✅ one box that finds anything across the whole app
 
 ## Sync
 

@@ -9,6 +9,7 @@ import {
   Dumbbell,
   Trophy,
   UtensilsCrossed,
+  Search,
   Flag,
   Flame,
   Check,
@@ -709,6 +710,15 @@ export default function Home() {
         title={`${greeting(nowDate.getHours())}${name}`}
         subtitle={dateLabel}
         showSettings
+        action={
+          <Link
+            to="/search"
+            aria-label="Search everything"
+            className="rounded-full p-2.5 text-muted transition-colors hover:bg-surface-2 hover:text-ink md:hidden"
+          >
+            <Search size={20} />
+          </Link>
+        }
       />
 
       <DayBar />
