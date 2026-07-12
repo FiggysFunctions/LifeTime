@@ -71,7 +71,9 @@ export default function Shell() {
       </aside>
 
       {/* Content */}
-      <main className="mx-auto w-full max-w-2xl flex-1 px-4 pb-28 pt-4 md:ml-60 md:px-8 md:pb-12 md:pt-8">
+      {/* pt includes the iOS safe-area inset so the status bar / notch
+          never covers the header (env() is 0 everywhere else) */}
+      <main className="mx-auto w-full max-w-2xl flex-1 px-4 pb-28 pt-[calc(env(safe-area-inset-top)+1rem)] md:ml-60 md:px-8 md:pb-12 md:pt-[calc(env(safe-area-inset-top)+2rem)]">
         <Outlet />
       </main>
 
