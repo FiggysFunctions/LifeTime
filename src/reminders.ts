@@ -141,6 +141,7 @@ export async function syncReminders() {
       .sort((a, b) => a.at - b.at)
       .slice(0, 100);
 
+    const uidStr = (db.cloud.currentUserId || "").toLowerCase();
     await fetch("/api/subscribe", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -148,6 +149,8 @@ export async function syncReminders() {
         deviceId: deviceId(),
         subscription: sub.toJSON(),
         reminders,
+        // ties this device to its account so household pushes can find it
+        userId: uidStr && uidStr !== "unauthorized" ? uidStr : undefined,
       }),
     });
   } catch {

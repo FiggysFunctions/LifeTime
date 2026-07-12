@@ -64,7 +64,12 @@ export default async function handler(req, res) {
         }
       }
       if (gone) await r.del(key);
-      else await r.set(key, { subscription: rec.subscription, reminders: keep });
+      else
+        await r.set(key, {
+          subscription: rec.subscription,
+          reminders: keep,
+          userId: rec.userId,
+        });
     }
   } while (cursor !== "0");
 

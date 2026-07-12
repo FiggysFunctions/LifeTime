@@ -28,6 +28,7 @@ import {
 } from "../actions";
 import { exportBackup } from "../backup";
 import { getHouseholdRealmId } from "../household";
+import { notifyEventAdded } from "../notify";
 import { useSettings } from "../settings";
 import { PageHeader, Card, Button, Chip } from "../components/ui";
 
@@ -149,6 +150,7 @@ function QuickAdd() {
       createdAt: now(),
       updatedAt: now(),
     });
+    notifyEventAdded(t, `Today${time ? ` · ${timeLabel(time)}` : ""}`);
     setMode(null);
   };
 
@@ -551,7 +553,15 @@ export default function Home() {
   const dueTasks = useLiveQuery(
     () =>
       db.tasks
-        .filter((t) => !t.done && t.due !== null && t.due <= todayStr())
+        .filter(
+          (t) =>
+            !t.done &&
+            t.due !== null &&
+            t.due <= todayStr() &&
+            // not a household task assigned specifically to someone else
+            (!t.assignedTo ||
+              t.assignedTo === (db.cloud.currentUserId || "").toLowerCase())
+        )
         .toArray(),
     [],
     []
@@ -568,7 +578,15 @@ export default function Home() {
     0
   );
   const openTasks = useLiveQuery(
-    () => db.tasks.filter((t) => !t.done).count(),
+    () =>
+      db.tasks
+        .filter(
+          (t) =>
+            !t.done &&
+            (!t.assignedTo ||
+              t.assignedTo === (db.cloud.currentUserId || "").toLowerCase())
+        )
+        .count(),
     [],
     0
   );

@@ -12,6 +12,7 @@ import {
 import db, { uid, now, type Meal, type MealPlan } from "../db";
 import { todayStr, addDays } from "../dates";
 import { getHouseholdRealmId } from "../household";
+import { noteListAddition } from "../notify";
 import { PageHeader, Button, Chip } from "../components/ui";
 
 // Meals and Lists stay independent: "add to list" copies ingredient names
@@ -115,6 +116,14 @@ function AddToListPanel({
 
   const send = async (listId: string, listName: string) => {
     const { added, skipped } = await addIngredientsToList(listId, ingredients);
+    if (added > 0) {
+      const [list, householdId] = await Promise.all([
+        db.lists.get(listId),
+        getHouseholdRealmId(),
+      ]);
+      if (householdId && list?.realmId === householdId)
+        noteListAddition(listId, listName, added);
+    }
     setMessage(
       `Added ${added} ${added === 1 ? "item" : "items"} to ${listName}` +
         (skipped > 0 ? ` (${skipped} already there)` : "")

@@ -1,9 +1,11 @@
 import { useState, type ReactNode } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Plus, Check, X, Repeat, Flag, CheckSquare } from "lucide-react";
+import { Plus, Check, X, Repeat, Flag, CheckSquare, Users } from "lucide-react";
 import db, { uid, now, type Task, type Priority, type Recurrence } from "../db";
 import { todayStr, addDays, dueLabel } from "../dates";
+import { getHouseholdRealmId } from "../household";
+import { myName, notifyHousehold } from "../notify";
 import {
   completeTask,
   PRIORITY_WEIGHT,
@@ -35,15 +37,24 @@ function Chip({
   );
 }
 
-function NewTaskForm({ onDone }: { onDone: () => void }) {
+function NewTaskForm({
+  onDone,
+  assignees,
+}: {
+  onDone: () => void;
+  assignees: { id: string; label: string }[];
+}) {
   const [title, setTitle] = useState("");
   const [priority, setPriority] = useState<Priority>("medium");
   const [due, setDue] = useState<string | null>(todayStr());
   const [recurrence, setRecurrence] = useState<Recurrence>("none");
+  const [assign, setAssign] = useState<string>("me"); // "me" | "anyone" | userId
 
   const create = async () => {
     const t = title.trim();
     if (!t) return;
+    const shared = assign !== "me";
+    const realmId = shared ? await getHouseholdRealmId() : undefined;
     await db.tasks.add({
       id: uid(),
       title: t,
@@ -53,9 +64,18 @@ function NewTaskForm({ onDone }: { onDone: () => void }) {
       recurrence,
       done: false,
       completedAt: null,
+      realmId,
+      assignedTo: shared && assign !== "anyone" ? assign : undefined,
       createdAt: now(),
       updatedAt: now(),
     });
+    if (realmId)
+      notifyHousehold(
+        `${myName()} assigned a task ${assign === "anyone" ? "to anyone" : "to you"}`,
+        t,
+        "/#/tasks",
+        assign === "anyone" ? undefined : [assign]
+      );
     onDone();
   };
 
@@ -114,6 +134,31 @@ function NewTaskForm({ onDone }: { onDone: () => void }) {
         </div>
       </div>
 
+      {assignees.length > 0 && (
+        <div>
+          <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted">
+            Assign to
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            <Chip active={assign === "me"} onClick={() => setAssign("me")}>
+              Me
+            </Chip>
+            <Chip active={assign === "anyone"} onClick={() => setAssign("anyone")}>
+              Anyone
+            </Chip>
+            {assignees.map((a) => (
+              <Chip
+                key={a.id}
+                active={assign === a.id}
+                onClick={() => setAssign(a.id)}
+              >
+                {a.label}
+              </Chip>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div>
         <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted">
           Repeat
@@ -137,7 +182,7 @@ function NewTaskForm({ onDone }: { onDone: () => void }) {
   );
 }
 
-function TaskRow({ task }: { task: Task }) {
+function TaskRow({ task, householdId }: { task: Task; householdId?: string }) {
   const overdue = !task.done && task.due !== null && task.due < todayStr();
 
   const complete = () => completeTask(task);
@@ -163,6 +208,12 @@ function TaskRow({ task }: { task: Task }) {
               <Repeat size={11} /> {task.recurrence}
             </span>
           )}
+          {!!householdId && task.realmId === householdId && (
+            <span className="flex items-center gap-1 text-muted">
+              <Users size={11} />
+              {task.assignedTo ? task.assignedTo.split("@")[0] : "anyone"}
+            </span>
+          )}
         </p>
       </div>
       <button
@@ -180,10 +231,12 @@ function Section({
   label,
   tone = "text-muted",
   tasks,
+  householdId,
 }: {
   label: string;
   tone?: string;
   tasks: Task[];
+  householdId?: string;
 }) {
   if (tasks.length === 0) return null;
   return (
@@ -193,7 +246,7 @@ function Section({
       </p>
       <ul className="space-y-2">
         {tasks.map((t) => (
-          <TaskRow key={t.id} task={t} />
+          <TaskRow key={t.id} task={t} householdId={householdId} />
         ))}
       </ul>
     </div>
@@ -205,6 +258,27 @@ export default function Tasks() {
   const [params] = useSearchParams();
   const [creating, setCreating] = useState(params.get("new") === "1");
   const tasks = useLiveQuery(() => db.tasks.toArray(), []);
+  const householdId = useLiveQuery(() => getHouseholdRealmId(), [], undefined);
+  const assignees = useLiveQuery(
+    async () => {
+      const rid = await getHouseholdRealmId();
+      if (!rid) return [];
+      const me = (db.cloud.currentUserId || "").toLowerCase();
+      const realm = await db.realms.get(rid);
+      const members = await db.members.where("realmId").equals(rid).toArray();
+      const found = new Map<string, string>();
+      const add = (raw?: string) => {
+        const idStr = raw?.toLowerCase();
+        if (idStr && idStr !== me && idStr !== "unauthorized")
+          found.set(idStr, idStr.split("@")[0]);
+      };
+      add(realm?.owner);
+      members.forEach((m) => add(m.userId ?? m.email));
+      return [...found].map(([idStr, label]) => ({ id: idStr, label }));
+    },
+    [],
+    [] as { id: string; label: string }[]
+  );
 
   const today = todayStr();
   const byPlan = (a: Task, b: Task) =>
@@ -241,7 +315,9 @@ export default function Tasks() {
         }
       />
 
-      {creating && <NewTaskForm onDone={() => setCreating(false)} />}
+      {creating && (
+        <NewTaskForm onDone={() => setCreating(false)} assignees={assignees} />
+      )}
 
       {tasks && tasks.length === 0 && !creating && (
         <div className="flex flex-col items-center rounded-2xl border border-dashed border-line bg-surface px-6 py-14 text-center">
@@ -256,10 +332,10 @@ export default function Tasks() {
         </div>
       )}
 
-      <Section label="Overdue" tone="text-red-500 dark:text-red-400" tasks={overdue} />
-      <Section label="Today" tone="text-accent" tasks={dueToday} />
-      <Section label="Upcoming" tasks={upcoming} />
-      <Section label="Someday" tasks={someday} />
+      <Section label="Overdue" tone="text-red-500 dark:text-red-400" tasks={overdue} householdId={householdId} />
+      <Section label="Today" tone="text-accent" tasks={dueToday} householdId={householdId} />
+      <Section label="Upcoming" tasks={upcoming} householdId={householdId} />
+      <Section label="Someday" tasks={someday} householdId={householdId} />
 
       {done.length > 0 && (
         <div>

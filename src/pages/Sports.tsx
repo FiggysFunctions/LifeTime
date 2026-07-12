@@ -5,6 +5,7 @@ import db, { uid, now } from "../db";
 import { toDateStr, todayStr, dueLabel, timeLabel } from "../dates";
 import { syncReminders } from "../reminders";
 import { getHouseholdRealmId } from "../household";
+import { notifyEventAdded } from "../notify";
 import { PageHeader, Button, Chip } from "../components/ui";
 
 // Fixtures come from /api/fixtures, which only ever returns events that
@@ -71,6 +72,10 @@ function FixtureRow({ f, inCalendar }: { f: Fixture; inCalendar: boolean }) {
       createdAt: now(),
       updatedAt: now(),
     });
+    notifyEventAdded(
+      `${emojiFor(f.league)} ${f.title}`,
+      `${dueLabel(toDateStr(d))} · ${localTime(f.start)}`
+    );
     syncReminders();
     setOpen(false);
   };

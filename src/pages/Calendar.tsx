@@ -2,9 +2,10 @@ import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { ChevronLeft, ChevronRight, Plus, X, CalendarDays, Bell } from "lucide-react";
 import db, { uid, now } from "../db";
-import { toDateStr, todayStr, timeLabel } from "../dates";
+import { toDateStr, todayStr, timeLabel, dueLabel } from "../dates";
 import { syncReminders } from "../reminders";
 import { getHouseholdRealmId } from "../household";
+import { notifyEventAdded } from "../notify";
 import { PageHeader, Card } from "../components/ui";
 
 const REMINDER_OPTIONS: { value: number | null; label: string }[] = [
@@ -35,6 +36,7 @@ function AddEventForm({ date }: { date: string }) {
       createdAt: now(),
       updatedAt: now(),
     });
+    notifyEventAdded(t, `${dueLabel(date)}${time ? ` · ${timeLabel(time)}` : ""}`);
     setTitle("");
     setTime("");
     setReminder(null);

@@ -4,6 +4,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { ArrowLeft, Plus, Trash2, Check, X, Users } from "lucide-react";
 import db, { uid, now } from "../db";
 import { getHouseholdRealmId, setListShared } from "../household";
+import { noteListAddition } from "../notify";
 import { Button, Card } from "../components/ui";
 
 export default function ListDetail() {
@@ -48,6 +49,9 @@ export default function ListDetail() {
       createdAt: now(),
       updatedAt: now(),
     });
+    // batched household ping when the list is shared
+    if (householdId && list.realmId === householdId)
+      noteListAddition(id, list.name);
     setText("");
   };
 

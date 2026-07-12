@@ -7,7 +7,7 @@ export default async function handler(req, res) {
   const r = redis();
   if (!r) return res.status(503).json({ error: "storage-not-configured" });
 
-  const { deviceId, subscription, reminders, remove } = req.body ?? {};
+  const { deviceId, subscription, reminders, remove, userId } = req.body ?? {};
   if (typeof deviceId !== "string" || !deviceId || deviceId.length > 64)
     return res.status(400).json({ error: "bad-request" });
   const key = `device:${deviceId}`;
@@ -35,6 +35,14 @@ export default async function handler(req, res) {
     }))
     .filter((x) => Number.isFinite(x.at));
 
-  await r.set(key, { subscription, reminders: clean });
+  await r.set(key, {
+    subscription,
+    reminders: clean,
+    // which household account this device belongs to (for /api/notify)
+    userId:
+      typeof userId === "string" && userId
+        ? userId.toLowerCase().slice(0, 120)
+        : undefined,
+  });
   return res.status(200).json({ ok: true, count: clean.length });
 }
