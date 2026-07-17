@@ -1,5 +1,5 @@
 import db from "./db";
-import { timeLabel, addDays } from "./dates";
+import { timeLabel, addDays, toDateStr, todayStr } from "./dates";
 import { fmtMoney } from "./money";
 
 // Push reminders need a server to send them while the phone is locked.
@@ -83,6 +83,88 @@ function nineAm(dateStr: string): number {
   return new Date(y, m - 1, d, 9, 0).getTime();
 }
 
+function readSettings(): Record<string, unknown> {
+  try {
+    return JSON.parse(localStorage.getItem("lifetime-settings") || "{}");
+  } catch {
+    return {};
+  }
+}
+
+// The Sunday 6pm weekly digest: a summary push computed on-device and
+// scheduled like any other reminder. Refreshed every sync, so it reflects
+// the last time the app was opened before Sunday evening.
+export async function buildDigest() {
+  const s = readSettings();
+  if (s.weeklyDigest === false) return null;
+  const currency = typeof s.currency === "string" && s.currency ? s.currency : "£";
+  const goal = Math.min(Math.max(Number(s.weeklyGoal) || 3, 1), 7);
+
+  const today = todayStr();
+  const monday = addDays(today, -((new Date().getDay() + 6) % 7));
+  const sunday = addDays(monday, 6);
+
+  const weekSpent = (
+    await db.expenses.where("date").between(monday, sunday, true, true).toArray()
+  ).reduce((sum, e) => sum + e.amount, 0);
+
+  const activeDates = new Set([
+    ...(await db.workouts.toArray()).map((w) => w.date),
+    ...(await db.cardio.toArray()).map((c) => c.date),
+    ...(await db.activity.toArray()).map((a) => a.date),
+  ]);
+  let active = 0;
+  for (let i = 0; i < 7; i++) if (activeDates.has(addDays(monday, i))) active++;
+
+  const soon = addDays(today, 7);
+  const billsSoon = (await db.bills.toArray()).filter((b) => b.due <= soon);
+  const billsTotal = billsSoon.reduce((sum, b) => sum + b.amount, 0);
+  const eventsAhead = await db.events
+    .where("date")
+    .between(addDays(today, 1), soon, true, true)
+    .count();
+
+  const parts = [
+    `${fmtMoney(weekSpent, currency)} spent`,
+    `${active}/${goal} active days`,
+  ];
+  if (billsSoon.length > 0)
+    parts.push(
+      `${billsSoon.length} ${billsSoon.length === 1 ? "bill" : "bills"} (${fmtMoney(billsTotal, currency)}) next wk`
+    );
+  if (eventsAhead > 0)
+    parts.push(`${eventsAhead} ${eventsAhead === 1 ? "event" : "events"} ahead`);
+
+  // next Sunday 18:00 local (or the one after if that's already passed)
+  const d = new Date();
+  let target = new Date(
+    d.getFullYear(),
+    d.getMonth(),
+    d.getDate() + ((7 - d.getDay()) % 7),
+    18,
+    0
+  );
+  if (target.getTime() <= Date.now())
+    target = new Date(
+      target.getFullYear(),
+      target.getMonth(),
+      target.getDate() + 7,
+      18,
+      0
+    );
+
+  return {
+    id: `digest-${toDateStr(target)}`,
+    title: "Your week in Lifetime",
+    body: parts.join(" · ").slice(0, 158),
+    at: target.getTime(),
+    url: "/",
+  };
+}
+
+if (import.meta.env.DEV)
+  (window as unknown as { __buildDigest: unknown }).__buildDigest = buildDigest;
+
 // Upload the next 60 days of reminders (calendar events + bills). Called
 // on app start and whenever either changes; offline failures are silent —
 // the next call retries.
@@ -136,7 +218,12 @@ export async function syncReminders() {
       };
     });
 
-    const reminders = [...eventReminders, ...billReminders]
+    const digest = await buildDigest();
+    const reminders = [
+      ...eventReminders,
+      ...billReminders,
+      ...(digest ? [digest] : []),
+    ]
       .filter((r) => r.at > nowMs - 60_000 && r.at < nowMs + 60 * 86_400_000)
       .sort((a, b) => a.at - b.at)
       .slice(0, 100);

@@ -49,6 +49,9 @@ From now on, any change committed to the GitHub repo redeploys automatically.
 - **Phase 13 — Household sharing** ✅ share the calendar, meals and chosen
   lists with your other half (Settings → Household); tasks, budget,
   fitness and habits stay personal to each account
+- **Phase 14 — Quality drop** ✅ Sunday-evening weekly digest push, an
+  Insights page of local trends, quantities on list items, favourite
+  teams on Sports, and shared household Notes
 
 ## Sync
 

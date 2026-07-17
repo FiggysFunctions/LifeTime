@@ -19,7 +19,16 @@ export interface ListItem {
   listId: string;
   text: string;
   done: boolean;
+  qty?: number; // absent = 1
   realmId?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface Note {
+  id: string;
+  text: string; // first line doubles as the title
+  realmId?: string; // household realm when shared
   createdAt: number;
   updatedAt: number;
 }
@@ -190,6 +199,7 @@ const db = new Dexie("lifetime", { addons: [dexieCloud] }) as Dexie & {
   habitTicks: EntityTable<HabitTick, "id">;
   meals: EntityTable<Meal, "id">;
   mealPlans: EntityTable<MealPlan, "id">;
+  notes: EntityTable<Note, "id">;
 };
 
 db.version(1).stores({
@@ -242,6 +252,11 @@ db.version(8).stores({});
 db.version(9).stores({
   meals: "id, createdAt",
   mealPlans: "id, date, mealId, createdAt",
+});
+
+// v10 — Phase 14: shared notes.
+db.version(10).stores({
+  notes: "id, createdAt, updatedAt",
 });
 
 // Sync is opt-in: without a database URL (or before signing in) the app

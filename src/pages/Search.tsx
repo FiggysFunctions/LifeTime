@@ -9,6 +9,7 @@ import {
   PiggyBank,
   Dumbbell,
   UtensilsCrossed,
+  StickyNote,
   type LucideIcon,
 } from "lucide-react";
 import db from "../db";
@@ -44,6 +45,7 @@ export default function Search() {
   const workouts = useLiveQuery(() => db.workouts.toArray(), [], []);
   const cardio = useLiveQuery(() => db.cardio.toArray(), [], []);
   const habits = useLiveQuery(() => db.habits.toArray(), [], []);
+  const notes = useLiveQuery(() => db.notes.toArray(), [], []);
 
   const listById = new Map(lists.map((l) => [l.id, l]));
   const catById = new Map(categories.map((c) => [c.id, c]));
@@ -148,6 +150,20 @@ export default function Search() {
                 title: `${m.emoji} ${m.name}`,
                 context: m.ingredients.slice(0, 4).join(" · ") || "Meal",
                 to: "/meals",
+              })),
+          },
+          {
+            label: "Notes",
+            icon: StickyNote,
+            results: notes
+              .filter((n) => match(n.text))
+              .map((n) => ({
+                id: `note-${n.id}`,
+                title: n.text.split("\n")[0].trim() || "Untitled",
+                context:
+                  n.text.split("\n").slice(1).join(" ").trim().slice(0, 80) ||
+                  "Note",
+                to: "/notes",
               })),
           },
           {

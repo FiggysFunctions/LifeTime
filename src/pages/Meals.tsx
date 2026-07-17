@@ -74,34 +74,44 @@ const dayLabel = (dateStr: string) => {
   });
 };
 
-// Copy ingredients into a list, skipping (case-insensitively) anything
-// already on it and unticked. Returns how many were added vs skipped.
+// Copy ingredients into a list. Anything already on it (unticked, matched
+// case-insensitively) gets its quantity bumped instead of a duplicate row.
 async function addIngredientsToList(listId: string, ingredients: string[]) {
+  const list = await db.lists.get(listId);
   const existing = await db.items.where("listId").equals(listId).toArray();
-  const have = new Set(
-    existing.filter((i) => !i.done).map((i) => i.text.trim().toLowerCase())
+  const open = new Map(
+    existing
+      .filter((i) => !i.done)
+      .map((i) => [i.text.trim().toLowerCase(), i])
   );
   let added = 0;
-  let skipped = 0;
+  let bumped = 0;
   for (const ing of ingredients) {
     const key = ing.trim().toLowerCase();
     if (!key) continue;
-    if (have.has(key)) {
-      skipped++;
+    const match = open.get(key);
+    if (match) {
+      await db.items.update(match.id, {
+        qty: (match.qty ?? 1) + 1,
+        updatedAt: now(),
+      });
+      bumped++;
       continue;
     }
-    have.add(key);
-    await db.items.add({
+    const item = {
       id: uid(),
       listId,
       text: ing.trim(),
       done: false,
+      realmId: list?.realmId,
       createdAt: now(),
       updatedAt: now(),
-    });
+    };
+    await db.items.add(item);
+    open.set(key, item);
     added++;
   }
-  return { added, skipped };
+  return { added, bumped };
 }
 
 function AddToListPanel({
@@ -115,18 +125,18 @@ function AddToListPanel({
   const [message, setMessage] = useState("");
 
   const send = async (listId: string, listName: string) => {
-    const { added, skipped } = await addIngredientsToList(listId, ingredients);
-    if (added > 0) {
+    const { added, bumped } = await addIngredientsToList(listId, ingredients);
+    if (added + bumped > 0) {
       const [list, householdId] = await Promise.all([
         db.lists.get(listId),
         getHouseholdRealmId(),
       ]);
       if (householdId && list?.realmId === householdId)
-        noteListAddition(listId, listName, added);
+        noteListAddition(listId, listName, added + bumped);
     }
     setMessage(
       `Added ${added} ${added === 1 ? "item" : "items"} to ${listName}` +
-        (skipped > 0 ? ` (${skipped} already there)` : "")
+        (bumped > 0 ? ` (${bumped} topped up)` : "")
     );
   };
 

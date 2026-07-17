@@ -23,6 +23,7 @@ import {
   reminderStatus,
   enableReminders,
   disableReminders,
+  syncReminders,
   type ReminderStatus,
 } from "../reminders";
 import { PageHeader, Card, Button } from "../components/ui";
@@ -219,9 +220,11 @@ function SyncCard() {
 }
 
 function RemindersCard() {
+  const { settings, update } = useSettings();
   const [status, setStatus] = useState<ReminderStatus>(reminderStatus);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const digestOn = settings.weeklyDigest !== false;
 
   const turnOn = async () => {
     setBusy(true);
@@ -281,6 +284,25 @@ function RemindersCard() {
               </Button>
             )}
           </div>
+          {status === "on" && (
+            <button
+              onClick={() => {
+                update({ weeklyDigest: !digestOn });
+                syncReminders();
+              }}
+              className="mt-2.5 flex items-center gap-2 text-xs text-muted underline-offset-2 hover:underline"
+            >
+              <span
+                className={`grid h-4 w-4 place-items-center rounded ${
+                  digestOn ? "bg-accent text-white dark:text-bg" : "border border-line"
+                }`}
+              >
+                {digestOn && "✓"}
+              </span>
+              Sunday 6pm weekly digest (week's spending, activity & what's
+              ahead)
+            </button>
+          )}
           {error && (
             <p className="mt-2 text-sm text-red-500 dark:text-red-400">
               {error}
@@ -510,7 +532,7 @@ export default function Settings() {
       </Card>
 
       <p className="pt-2 text-center text-xs text-muted">
-        Lifetime v1.0 · your whole life, one app
+        Lifetime v1.1 · your whole life, one app
       </p>
     </div>
   );

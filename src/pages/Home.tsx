@@ -9,6 +9,8 @@ import {
   Dumbbell,
   Trophy,
   UtensilsCrossed,
+  StickyNote,
+  TrendingUp,
   Search,
   Flag,
   Flame,
@@ -718,6 +720,18 @@ export default function Home() {
         mealsToday.length > 0
           ? `Tonight: ${mealsToday[0]!.name}`
           : "Plan the week",
+    },
+    {
+      to: "/notes",
+      icon: StickyNote,
+      label: "Notes",
+      desc: "Household jottings",
+    },
+    {
+      to: "/insights",
+      icon: TrendingUp,
+      label: "Insights",
+      desc: "Trends & totals",
     },
   ];
 

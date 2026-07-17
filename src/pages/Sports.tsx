@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { RefreshCw, Trophy, CalendarPlus, Check, Bell } from "lucide-react";
+import { RefreshCw, Trophy, CalendarPlus, Check, Bell, Star } from "lucide-react";
 import db, { uid, now } from "../db";
 import { toDateStr, todayStr, dueLabel, timeLabel } from "../dates";
 import { syncReminders } from "../reminders";
 import { getHouseholdRealmId } from "../household";
 import { notifyEventAdded } from "../notify";
+import { useSettings } from "../settings";
 import { PageHeader, Button, Chip } from "../components/ui";
+
+const TEAM_LEAGUES = ["NRL", "NRLW", "AFL"]; // fixtures shaped "A v B"
 
 // Fixtures come from /api/fixtures, which only ever returns events that
 // haven't started — no scores, no live states, no spoilers, by design.
@@ -56,7 +59,15 @@ const REMINDER_OPTIONS: { value: number | null; label: string }[] = [
   { value: 60, label: "1 hr before" },
 ];
 
-function FixtureRow({ f, inCalendar }: { f: Fixture; inCalendar: boolean }) {
+function FixtureRow({
+  f,
+  inCalendar,
+  fav,
+}: {
+  f: Fixture;
+  inCalendar: boolean;
+  fav: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const [reminder, setReminder] = useState<number | null>(30);
 
@@ -81,11 +92,20 @@ function FixtureRow({ f, inCalendar }: { f: Fixture; inCalendar: boolean }) {
   };
 
   return (
-    <li className="rounded-xl border border-line bg-surface px-3.5 py-3">
+    <li
+      className={`rounded-xl border bg-surface px-3.5 py-3 ${
+        fav ? "border-accent-soft" : "border-line"
+      }`}
+    >
       <div className="flex items-center gap-3">
         <span className="text-lg">{emojiFor(f.league)}</span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm">{f.title}</p>
+          <p className="flex items-center gap-1.5 truncate text-sm">
+            {fav && (
+              <Star size={12} className="shrink-0 fill-current text-accent" />
+            )}
+            <span className="truncate">{f.title}</span>
+          </p>
           <p className="truncate text-xs text-muted">
             {f.league}
             {f.detail ? ` · ${f.detail}` : ""}
@@ -138,6 +158,7 @@ function FixtureRow({ f, inCalendar }: { f: Fixture; inCalendar: boolean }) {
 }
 
 export default function Sports() {
+  const { settings, update } = useSettings();
   const [fixtures, setFixtures] = useState<Fixture[] | null>(
     () => readCache()?.fixtures ?? null
   );
@@ -145,6 +166,17 @@ export default function Sports() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const [filter, setFilter] = useState<string | null>(null);
+  const [editingFavs, setEditingFavs] = useState(false);
+
+  const favTeams = settings.favTeams ?? [];
+  const isFav = (f: Fixture) =>
+    favTeams.some((t) => f.title.toLowerCase().includes(t.toLowerCase()));
+  const toggleFav = (team: string) =>
+    update({
+      favTeams: favTeams.includes(team)
+        ? favTeams.filter((t) => t !== team)
+        : [...favTeams, team],
+    });
 
   const load = async (force = false) => {
     const cache = readCache();
@@ -189,8 +221,20 @@ export default function Sports() {
 
   const nowMs = Date.now();
   const upcoming = (fixtures ?? []).filter(
-    (f) => f.start > nowMs && (!filter || f.league === filter)
+    (f) =>
+      f.start > nowMs &&
+      (filter === "★" ? isFav(f) : !filter || f.league === filter)
   );
+
+  // every team name currently appearing in team-sport fixtures
+  const allTeams = [
+    ...new Set(
+      (fixtures ?? [])
+        .filter((f) => TEAM_LEAGUES.includes(f.league))
+        .flatMap((f) => f.title.split(" v ").map((t) => t.trim()))
+        .filter(Boolean)
+    ),
+  ].sort();
 
   const groups: { date: string; items: Fixture[] }[] = [];
   for (const f of upcoming) {
@@ -228,7 +272,47 @@ export default function Sports() {
             {l.emoji} {l.key}
           </Chip>
         ))}
+        {favTeams.length > 0 && (
+          <Chip
+            active={filter === "★"}
+            onClick={() => setFilter(filter === "★" ? null : "★")}
+          >
+            ★ Mine
+          </Chip>
+        )}
+        <button
+          onClick={() => setEditingFavs(!editingFavs)}
+          className="flex items-center gap-1 rounded-full px-2.5 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-surface-2 hover:text-ink"
+        >
+          <Star size={12} /> {editingFavs ? "Done" : "Favourites"}
+        </button>
       </div>
+
+      {editingFavs && (
+        <div className="rounded-xl border border-dashed border-line p-3.5">
+          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted">
+            Tap your teams — their games get a star and the ★ Mine filter
+          </p>
+          {allTeams.length === 0 ? (
+            <p className="text-sm text-muted">
+              Teams appear here once fixtures have loaded.
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-1.5">
+              {allTeams.map((t) => (
+                <Chip
+                  key={t}
+                  active={favTeams.includes(t)}
+                  onClick={() => toggleFav(t)}
+                >
+                  {favTeams.includes(t) ? "★ " : ""}
+                  {t}
+                </Chip>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {loading && fixtures === null && (
         <p className="py-10 text-center text-sm text-muted">
@@ -263,7 +347,12 @@ export default function Sports() {
           </p>
           <ul className="space-y-2">
             {g.items.map((f) => (
-              <FixtureRow key={f.id} f={f} inCalendar={inCalendar(f)} />
+              <FixtureRow
+                key={f.id}
+                f={f}
+                inCalendar={inCalendar(f)}
+                fav={isFav(f)}
+              />
             ))}
           </ul>
         </div>

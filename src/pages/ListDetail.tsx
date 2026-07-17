@@ -40,19 +40,38 @@ export default function ListDetail() {
   const addItem = async () => {
     const t = text.trim();
     if (!t) return;
-    await db.items.add({
-      id: uid(),
-      listId: id,
-      text: t,
-      done: false,
-      realmId: list.realmId, // items live wherever their list lives
-      createdAt: now(),
-      updatedAt: now(),
-    });
+    // adding something already on the list bumps its quantity instead
+    const existing = open.find(
+      (i) => i.text.trim().toLowerCase() === t.toLowerCase()
+    );
+    if (existing) {
+      await db.items.update(existing.id, {
+        qty: (existing.qty ?? 1) + 1,
+        updatedAt: now(),
+      });
+    } else {
+      await db.items.add({
+        id: uid(),
+        listId: id,
+        text: t,
+        done: false,
+        realmId: list.realmId, // items live wherever their list lives
+        createdAt: now(),
+        updatedAt: now(),
+      });
+    }
     // batched household ping when the list is shared
     if (householdId && list.realmId === householdId)
       noteListAddition(id, list.name);
     setText("");
+  };
+
+  const bumpQty = (itemId: string, delta: number, current: number) => {
+    const next = Math.max(current + delta, 1);
+    return db.items.update(itemId, {
+      qty: next > 1 ? next : undefined,
+      updatedAt: now(),
+    });
   };
 
   const toggle = (itemId: string, value: boolean) =>
@@ -163,6 +182,29 @@ export default function ListDetail() {
               className="grid h-6 w-6 shrink-0 place-items-center rounded-full border-2 border-line transition-colors hover:border-accent"
             />
             <span className="min-w-0 flex-1 break-words text-sm">{i.text}</span>
+            <span className="flex shrink-0 items-center gap-0.5">
+              {(i.qty ?? 1) > 1 && (
+                <>
+                  <button
+                    onClick={() => bumpQty(i.id, -1, i.qty ?? 1)}
+                    aria-label={`Decrease quantity of ${i.text}`}
+                    className="rounded-full px-1.5 py-0.5 text-muted hover:bg-surface-2 hover:text-ink"
+                  >
+                    −
+                  </button>
+                  <span className="text-xs font-medium text-accent">
+                    ×{i.qty}
+                  </span>
+                </>
+              )}
+              <button
+                onClick={() => bumpQty(i.id, 1, i.qty ?? 1)}
+                aria-label={`Increase quantity of ${i.text}`}
+                className="rounded-full px-1.5 py-0.5 text-muted hover:bg-surface-2 hover:text-ink"
+              >
+                +
+              </button>
+            </span>
             <button
               onClick={() => removeItem(i.id)}
               aria-label={`Remove ${i.text}`}
@@ -209,6 +251,9 @@ export default function ListDetail() {
                 </button>
                 <span className="min-w-0 flex-1 break-words text-sm line-through">
                   {i.text}
+                  {(i.qty ?? 1) > 1 && (
+                    <span className="ml-1.5 text-xs no-underline">×{i.qty}</span>
+                  )}
                 </span>
               </li>
             ))}

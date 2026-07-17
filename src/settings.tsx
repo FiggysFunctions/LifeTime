@@ -29,6 +29,8 @@ interface Settings {
   currency: string;
   units: Units;
   weeklyGoal: number; // active days per week target
+  favTeams: string[]; // highlighted teams on the Sports page
+  weeklyDigest: boolean; // Sunday-evening summary push
 }
 
 const DEFAULTS: Settings = {
@@ -38,6 +40,8 @@ const DEFAULTS: Settings = {
   currency: "£",
   units: "metric",
   weeklyGoal: 3,
+  favTeams: [],
+  weeklyDigest: true,
 };
 const KEY = "lifetime-settings";
 
