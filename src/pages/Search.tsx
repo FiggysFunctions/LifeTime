@@ -144,7 +144,9 @@ export default function Search() {
             label: "Meals",
             icon: UtensilsCrossed,
             results: meals
-              .filter((m) => match(m.name) || m.ingredients.some(match))
+              .filter(
+                (m) => match(m.name) || match(m.note) || m.ingredients.some(match)
+              )
               .map((m) => ({
                 id: `meal-${m.id}`,
                 title: `${m.emoji} ${m.name}`,

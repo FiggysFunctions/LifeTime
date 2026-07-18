@@ -168,6 +168,7 @@ export interface Meal {
   name: string;
   emoji: string;
   ingredients: string[];
+  note?: string; // recipe link, method, cook time — freeform
   realmId?: string;
   createdAt: number;
   updatedAt: number;
@@ -176,7 +177,16 @@ export interface Meal {
 export interface MealPlan {
   id: string;
   date: string; // local "YYYY-MM-DD"
-  mealId: string;
+  mealId: string; // "" for quick entries (leftovers, takeaway…)
+  title?: string; // display text for quick entries
+  realmId?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface Staple {
+  id: string;
+  name: string; // pantry item skipped by shopping exports (matched case-insensitively)
   realmId?: string;
   createdAt: number;
   updatedAt: number;
@@ -200,6 +210,7 @@ const db = new Dexie("lifetime", { addons: [dexieCloud] }) as Dexie & {
   meals: EntityTable<Meal, "id">;
   mealPlans: EntityTable<MealPlan, "id">;
   notes: EntityTable<Note, "id">;
+  staples: EntityTable<Staple, "id">;
 };
 
 db.version(1).stores({
@@ -257,6 +268,11 @@ db.version(9).stores({
 // v10 — Phase 14: shared notes.
 db.version(10).stores({
   notes: "id, createdAt, updatedAt",
+});
+
+// v11 — meals upgrade: pantry staples.
+db.version(11).stores({
+  staples: "id, createdAt",
 });
 
 // Sync is opt-in: without a database URL (or before signing in) the app

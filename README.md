@@ -52,6 +52,10 @@ From now on, any change committed to the GitHub repo redeploys automatically.
 - **Phase 14 — Quality drop** ✅ Sunday-evening weekly digest push, an
   Insights page of local trends, quantities on list items, favourite
   teams on Sports, and shared household Notes
+- **Phase 15 — Meals upgrades** ✅ tap-to-edit meals with recipe
+  notes/links, fill-my-week & copy-last-week planning, leftovers/takeaway
+  quick days, and smarter shopping exports (remaining days only, pantry
+  staples skipped)
 
 ## Sync
 

@@ -615,7 +615,12 @@ export default function Home() {
       const byId = new Map(meals.map((m) => [m.id, m]));
       return plans
         .sort((a, b) => a.createdAt - b.createdAt)
-        .map((p) => byId.get(p.mealId))
+        .map(
+          (p) =>
+            byId.get(p.mealId) ??
+            // quick entries (leftovers, takeaway…) carry their own title
+            (p.title ? { id: p.id, emoji: "", name: p.title } : undefined)
+        )
         .filter((m) => m !== undefined);
     },
     [],
