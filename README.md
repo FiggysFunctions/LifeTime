@@ -56,6 +56,11 @@ From now on, any change committed to the GitHub repo redeploys automatically.
   notes/links, fill-my-week & copy-last-week planning, leftovers/takeaway
   quick days, and smarter shopping exports (remaining days only, pantry
   staples skipped)
+- **Phase 16 — The big expansion** ✅ local weather on the dashboard,
+  birthdays & anniversaries with lead-up reminders, savings goals,
+  a read-only work-calendar feed (paste an iCal link in Settings), a
+  home-upkeep task pack, more meal & workout starters, and an emergency
+  info note template
 
 ## Sync
 

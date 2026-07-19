@@ -8,6 +8,7 @@ import {
   BellRing,
   Cloud,
   Users,
+  CalendarDays,
 } from "lucide-react";
 import { useObservable, useLiveQuery } from "dexie-react-hooks";
 import db from "../db";
@@ -17,6 +18,7 @@ import {
   createHousehold,
   moveSharedModulesToHousehold,
 } from "../household";
+import { getFeedUrl, setFeedUrl } from "../feed";
 import { useSettings, ACCENTS, CURRENCIES, type ThemeMode } from "../settings";
 import { exportBackup, importBackup } from "../backup";
 import {
@@ -217,6 +219,46 @@ function SyncCard() {
       </Card>
     );
   return <SyncCardInner />;
+}
+
+function CalendarFeedCard() {
+  const [url, setUrl] = useState(getFeedUrl);
+  const [msg, setMsg] = useState("");
+
+  const save = () => {
+    setFeedUrl(url);
+    setMsg(
+      url.trim()
+        ? "Saved — feed events appear on your calendar and Today view."
+        : "Feed removed."
+    );
+  };
+
+  return (
+    <Card>
+      <p className="flex items-center gap-2 text-sm font-medium">
+        <CalendarDays size={15} className="text-accent" /> Work calendar feed
+      </p>
+      <p className="mt-1.5 text-sm leading-relaxed text-muted">
+        See your work or Google calendar inside Lifetime, read-only. In
+        Google Calendar: Settings → your calendar → "Secret address in iCal
+        format" — copy that link here. It stays on this device only.
+      </p>
+      <div className="mt-3 flex gap-2">
+        <input
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder="https://calendar.google.com/…/basic.ics"
+          className="min-w-0 flex-1 rounded-xl border border-line bg-bg px-3.5 py-2.5 text-sm outline-none placeholder:text-muted focus:border-accent"
+        />
+        <Button onClick={save}>Save</Button>
+      </div>
+      <p className="mt-2 text-xs text-muted">
+        Repeating events only show their first date for now.
+        {msg && ` ${msg}`}
+      </p>
+    </Card>
+  );
 }
 
 function RemindersCard() {
@@ -452,6 +494,8 @@ export default function Settings() {
 
       <RemindersCard />
 
+      <CalendarFeedCard />
+
       <Card>
         <p className="text-sm font-medium">Backup</p>
         <p className="mt-1.5 text-sm leading-relaxed text-muted">
@@ -532,7 +576,7 @@ export default function Settings() {
       </Card>
 
       <p className="pt-2 text-center text-xs text-muted">
-        Lifetime v1.1 · your whole life, one app
+        Lifetime v1.2 · your whole life, one app
       </p>
     </div>
   );

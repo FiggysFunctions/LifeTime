@@ -494,6 +494,214 @@ function BillsSection({
   );
 }
 
+// ---- savings goals (personal, like the rest of Budget) ----
+const GOAL_EMOJI = ["🏖️", "🚗", "🏠", "💍", "🎁", "💻", "✈️", "🛋️"];
+
+function GoalsSection() {
+  const { settings } = useSettings();
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState("");
+  const [emoji, setEmoji] = useState("🏖️");
+  const [target, setTarget] = useState("");
+  const [addingTo, setAddingTo] = useState<string | null>(null);
+  const [amount, setAmount] = useState("");
+  const goals = useLiveQuery(
+    () => db.goals.orderBy("createdAt").toArray(),
+    [],
+    []
+  );
+
+  const create = async () => {
+    const t = parseAmount(target);
+    if (!name.trim() || t === null) return;
+    await db.goals.add({
+      id: uid(),
+      name: name.trim(),
+      emoji,
+      target: t,
+      saved: 0,
+      createdAt: now(),
+      updatedAt: now(),
+    });
+    setName("");
+    setTarget("");
+  };
+
+  const deposit = async (goalId: string, current: number) => {
+    const n = parseAmount(amount);
+    if (n === null) return;
+    await db.goals.update(goalId, {
+      saved: Math.round((current + n) * 100) / 100,
+      updatedAt: now(),
+    });
+    setAddingTo(null);
+    setAmount("");
+  };
+
+  if (goals.length === 0 && !editing)
+    return (
+      <div>
+        <div className="mb-2 flex items-center justify-between px-1">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted">
+            Savings goals
+          </p>
+          <button
+            onClick={() => setEditing(true)}
+            className="flex items-center gap-1 text-xs text-muted underline-offset-2 hover:underline"
+          >
+            <Pencil size={12} /> Edit
+          </button>
+        </div>
+        <p className="rounded-xl border border-dashed border-line px-3.5 py-4 text-center text-sm text-muted">
+          Saving for something? Set a target and watch the bar fill up.
+        </p>
+      </div>
+    );
+
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between px-1">
+        <p className="text-xs font-medium uppercase tracking-wide text-muted">
+          Savings goals
+        </p>
+        <button
+          onClick={() => setEditing(!editing)}
+          className="flex items-center gap-1 text-xs text-muted underline-offset-2 hover:underline"
+        >
+          <Pencil size={12} /> {editing ? "Done" : "Edit"}
+        </button>
+      </div>
+      <div className="space-y-2">
+        {goals.map((g) => {
+          const done = g.saved >= g.target;
+          return (
+            <div
+              key={g.id}
+              className="rounded-xl border border-line bg-surface px-3.5 py-3"
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-lg">{g.emoji}</span>
+                <span className="min-w-0 flex-1 truncate text-sm">
+                  {g.name}
+                  {done && " 🎉"}
+                </span>
+                <span className="shrink-0 text-sm font-medium">
+                  {fmtMoney(g.saved, settings.currency)}
+                  <span className="text-muted">
+                    {" "}
+                    / {fmtMoney(g.target, settings.currency)}
+                  </span>
+                </span>
+                {editing ? (
+                  <button
+                    onClick={() => db.goals.delete(g.id)}
+                    aria-label={`Delete ${g.name}`}
+                    className="p-1 text-muted hover:text-red-500"
+                  >
+                    <X size={16} />
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setAddingTo(addingTo === g.id ? null : g.id);
+                      setAmount("");
+                    }}
+                    aria-label={`Add money to ${g.name}`}
+                    className="shrink-0 rounded-full bg-accent-soft px-2.5 py-1 text-xs font-medium text-accent"
+                  >
+                    + Add
+                  </button>
+                )}
+              </div>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-2">
+                <div
+                  className="h-full rounded-full bg-accent transition-all"
+                  style={{
+                    width: `${Math.min((g.saved / Math.max(g.target, 0.01)) * 100, 100)}%`,
+                  }}
+                />
+              </div>
+              {addingTo === g.id && (
+                <div className="mt-2.5 flex items-center gap-2 border-t border-line pt-2.5">
+                  <div className="flex items-center rounded-lg border border-line bg-bg focus-within:border-accent">
+                    <span className="pl-2 text-xs text-muted">
+                      {settings.currency}
+                    </span>
+                    <input
+                      autoFocus
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      onKeyDown={(e) =>
+                        e.key === "Enter" && deposit(g.id, g.saved)
+                      }
+                      inputMode="decimal"
+                      aria-label={`Amount to add to ${g.name}`}
+                      className="w-20 bg-transparent px-1.5 py-1.5 text-xs outline-none"
+                    />
+                  </div>
+                  <button
+                    onClick={() => deposit(g.id, g.saved)}
+                    className="rounded-xl bg-accent px-3 py-1.5 text-xs font-semibold text-white dark:text-bg"
+                  >
+                    Put it away
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+        {editing && (
+          <div className="space-y-2.5 rounded-xl border border-dashed border-line p-3.5">
+            <div className="flex gap-2">
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Goal — e.g. Bali trip"
+                className="min-w-0 flex-1 rounded-xl border border-line bg-bg px-3.5 py-2.5 text-sm outline-none placeholder:text-muted focus:border-accent"
+              />
+              <div className="flex shrink-0 items-center rounded-xl border border-line bg-bg focus-within:border-accent">
+                <span className="pl-2.5 text-xs text-muted">
+                  {settings.currency}
+                </span>
+                <input
+                  value={target}
+                  onChange={(e) => setTarget(e.target.value)}
+                  placeholder="Target"
+                  inputMode="decimal"
+                  aria-label="Goal target amount"
+                  className="w-20 bg-transparent px-1.5 py-2.5 text-sm outline-none placeholder:text-muted"
+                />
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {GOAL_EMOJI.map((e) => (
+                <button
+                  key={e}
+                  onClick={() => setEmoji(e)}
+                  aria-label={`Choose ${e}`}
+                  className={`rounded-lg p-1 text-base transition-colors ${
+                    emoji === e
+                      ? "bg-accent-soft ring-1 ring-accent/50"
+                      : "hover:bg-surface-2"
+                  }`}
+                >
+                  {e}
+                </button>
+              ))}
+              <button
+                onClick={create}
+                className="ml-auto rounded-xl bg-accent px-3 py-1.5 text-xs font-semibold text-white dark:text-bg"
+              >
+                Add goal
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function NewExpenseForm({
   categories,
   onDone,
@@ -869,6 +1077,7 @@ export default function Budget() {
 
       <UpcomingSection bills={bills ?? []} categories={categories} />
       <BillsSection bills={bills ?? []} categories={categories} />
+      <GoalsSection />
 
       {categories.length === 0 ? (
         <div className="flex flex-col items-center rounded-2xl border border-dashed border-line bg-surface px-6 py-14 text-center">

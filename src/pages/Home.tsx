@@ -31,6 +31,7 @@ import {
 import { exportBackup } from "../backup";
 import { getHouseholdRealmId } from "../household";
 import { notifyEventAdded } from "../notify";
+import { fetchFeedEvents, type FeedEvent } from "../feed";
 import { useSettings } from "../settings";
 import { PageHeader, Card, Button, Chip } from "../components/ui";
 
@@ -96,6 +97,127 @@ function NamePrompt() {
         Skip for now
       </button>
     </Card>
+  );
+}
+
+// WMO weather codes → emoji + short label
+const WMO: Record<number, [string, string]> = {
+  0: ["☀️", "Clear"], 1: ["🌤️", "Mostly clear"], 2: ["⛅", "Partly cloudy"],
+  3: ["☁️", "Overcast"], 45: ["🌫️", "Foggy"], 48: ["🌫️", "Foggy"],
+  51: ["🌦️", "Drizzle"], 53: ["🌦️", "Drizzle"], 55: ["🌦️", "Drizzle"],
+  61: ["🌧️", "Rain"], 63: ["🌧️", "Rain"], 65: ["🌧️", "Heavy rain"],
+  66: ["🌧️", "Freezing rain"], 67: ["🌧️", "Freezing rain"],
+  71: ["🌨️", "Snow"], 73: ["🌨️", "Snow"], 75: ["❄️", "Heavy snow"],
+  77: ["🌨️", "Snow"], 80: ["🌦️", "Showers"], 81: ["🌧️", "Showers"],
+  82: ["⛈️", "Heavy showers"], 85: ["🌨️", "Snow showers"],
+  86: ["🌨️", "Snow showers"], 95: ["⛈️", "Storms"], 96: ["⛈️", "Storms"],
+  99: ["⛈️", "Storms"],
+};
+
+interface WeatherData {
+  nowTemp: number;
+  nowCode: number;
+  min: number;
+  max: number;
+  rain: number;
+  tmrwMin: number;
+  tmrwMax: number;
+  tmrwRain: number;
+  tmrwCode: number;
+}
+
+function WeatherLine() {
+  const [state, setState] = useState<"loading" | "off" | "error" | WeatherData>(
+    "loading"
+  );
+
+  const load = async (lat: number, lon: number) => {
+    try {
+      const cached = JSON.parse(
+        localStorage.getItem("lifetime-weather-cache") || "null"
+      );
+      if (cached && Date.now() - cached.at < 30 * 60_000) {
+        setState(cached.data);
+        return;
+      }
+      const r = await fetch(
+        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
+          `&current=temperature_2m,weather_code` +
+          `&daily=weather_code,temperature_2m_min,temperature_2m_max,precipitation_probability_max` +
+          `&timezone=auto&forecast_days=2`
+      );
+      if (!r.ok) throw new Error();
+      const j = await r.json();
+      const data: WeatherData = {
+        nowTemp: Math.round(j.current.temperature_2m),
+        nowCode: j.current.weather_code,
+        min: Math.round(j.daily.temperature_2m_min[0]),
+        max: Math.round(j.daily.temperature_2m_max[0]),
+        rain: j.daily.precipitation_probability_max[0] ?? 0,
+        tmrwMin: Math.round(j.daily.temperature_2m_min[1]),
+        tmrwMax: Math.round(j.daily.temperature_2m_max[1]),
+        tmrwRain: j.daily.precipitation_probability_max[1] ?? 0,
+        tmrwCode: j.daily.weather_code[1],
+      };
+      localStorage.setItem(
+        "lifetime-weather-cache",
+        JSON.stringify({ at: Date.now(), data })
+      );
+      setState(data);
+    } catch {
+      setState("error");
+    }
+  };
+
+  useEffect(() => {
+    try {
+      const geo = JSON.parse(localStorage.getItem("lifetime-geo") || "null");
+      if (geo?.lat != null) load(geo.lat, geo.lon);
+      else setState("off");
+    } catch {
+      setState("off");
+    }
+  }, []);
+
+  const enable = () =>
+    navigator.geolocation?.getCurrentPosition(
+      (p) => {
+        const geo = { lat: p.coords.latitude, lon: p.coords.longitude };
+        localStorage.setItem("lifetime-geo", JSON.stringify(geo));
+        setState("loading");
+        load(geo.lat, geo.lon);
+      },
+      () => setState("error")
+    );
+
+  if (state === "loading") return null;
+  if (state === "off")
+    return (
+      <button
+        onClick={enable}
+        className="text-xs text-muted underline-offset-2 hover:underline"
+      >
+        ☀️ Add local weather to your day
+      </button>
+    );
+  if (state === "error")
+    return (
+      <p className="text-xs text-muted">
+        Weather unavailable right now — it'll retry later.
+      </p>
+    );
+
+  const [emoji, label] = WMO[state.nowCode] ?? ["🌡️", ""];
+  const [tEmoji] = WMO[state.tmrwCode] ?? ["🌡️", ""];
+  return (
+    <p className="text-xs text-muted">
+      {emoji} {state.nowTemp}° now · {state.min}–{state.max}°
+      {state.rain >= 30 ? ` · ${state.rain}% rain` : ""} {label && `· ${label}`}
+      <span className="ml-2 opacity-75">
+        Tomorrow {tEmoji} {state.tmrwMin}–{state.tmrwMax}°
+        {state.tmrwRain >= 30 ? ` · ${state.tmrwRain}% rain` : ""}
+      </span>
+    </p>
   );
 }
 
@@ -573,6 +695,22 @@ export default function Home() {
     [],
     []
   );
+  const [feedToday, setFeedToday] = useState<FeedEvent[]>([]);
+  useEffect(() => {
+    fetchFeedEvents().then((evs) =>
+      setFeedToday(evs.filter((e) => e.date === todayStr()))
+    );
+  }, []);
+  const occasionsToday = useLiveQuery(
+    async () => {
+      const [, m, d] = todayStr().split("-").map(Number);
+      return (await db.occasions.toArray()).filter(
+        (o) => o.month === m && o.day === d
+      );
+    },
+    [],
+    []
+  );
   const bills = useLiveQuery(() => db.bills.toArray(), [], []);
   const openItems = useLiveQuery(
     () => db.items.filter((i) => !i.done).count(),
@@ -665,7 +803,9 @@ export default function Home() {
     sortedEvents.length === 0 &&
     sortedTasks.length === 0 &&
     billsDueNow.length === 0 &&
-    mealsToday.length === 0;
+    mealsToday.length === 0 &&
+    occasionsToday.length === 0 &&
+    feedToday.length === 0;
 
   const goal = Math.min(Math.max(settings.weeklyGoal || 3, 1), 7);
   const modules = [
@@ -762,6 +902,8 @@ export default function Home() {
 
       <DayBar />
 
+      <WeatherLine />
+
       {!settings.name && <NamePrompt />}
 
       {/* Today digest */}
@@ -770,6 +912,21 @@ export default function Home() {
           Today
         </p>
         <div className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface">
+          {occasionsToday.map((o) => (
+            <Link
+              key={o.id}
+              to="/calendar"
+              className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2"
+            >
+              <span className="text-lg">{o.emoji}</span>
+              <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                {o.name}
+              </span>
+              <span className="shrink-0 text-xs font-medium text-accent">
+                Today 🎉
+              </span>
+            </Link>
+          ))}
           {sortedEvents.map((e) => (
             <Link
               key={e.id}
@@ -781,6 +938,20 @@ export default function Home() {
               </span>
               <span className="min-w-0 flex-1 truncate text-sm">{e.title}</span>
             </Link>
+          ))}
+          {feedToday.map((f) => (
+            <div
+              key={f.id}
+              className="flex items-center gap-3 px-4 py-3 opacity-75"
+            >
+              <span className="w-14 shrink-0 text-xs font-medium text-muted">
+                {f.time ? timeLabel(f.time) : "All day"}
+              </span>
+              <span className="min-w-0 flex-1 truncate text-sm">{f.title}</span>
+              <span className="shrink-0 text-[10px] font-medium uppercase text-muted">
+                feed
+              </span>
+            </div>
           ))}
           {topTasks.map((t) => (
             <div key={t.id} className="flex items-center gap-3 px-4 py-3">

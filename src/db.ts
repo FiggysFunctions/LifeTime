@@ -34,7 +34,7 @@ export interface Note {
 }
 
 export type Priority = "low" | "medium" | "high";
-export type Recurrence = "none" | "daily" | "weekly" | "monthly";
+export type Recurrence = "none" | "daily" | "weekly" | "monthly" | "yearly";
 
 export interface Task {
   id: string;
@@ -184,6 +184,27 @@ export interface MealPlan {
   updatedAt: number;
 }
 
+export interface Occasion {
+  id: string;
+  name: string;
+  emoji: string;
+  month: number; // 1-12
+  day: number; // 1-31
+  realmId?: string; // shared with the household by default
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface Goal {
+  id: string;
+  name: string;
+  emoji: string;
+  target: number;
+  saved: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
 export interface Staple {
   id: string;
   name: string; // pantry item skipped by shopping exports (matched case-insensitively)
@@ -211,6 +232,8 @@ const db = new Dexie("lifetime", { addons: [dexieCloud] }) as Dexie & {
   mealPlans: EntityTable<MealPlan, "id">;
   notes: EntityTable<Note, "id">;
   staples: EntityTable<Staple, "id">;
+  occasions: EntityTable<Occasion, "id">;
+  goals: EntityTable<Goal, "id">;
 };
 
 db.version(1).stores({
@@ -273,6 +296,12 @@ db.version(10).stores({
 // v11 — meals upgrade: pantry staples.
 db.version(11).stores({
   staples: "id, createdAt",
+});
+
+// v12 — Phase 16: birthdays/anniversaries + savings goals.
+db.version(12).stores({
+  occasions: "id, createdAt",
+  goals: "id, createdAt",
 });
 
 // Sync is opt-in: without a database URL (or before signing in) the app

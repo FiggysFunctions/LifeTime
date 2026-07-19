@@ -1,7 +1,16 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { ChevronLeft, ChevronRight, Plus, X, CalendarDays, Bell } from "lucide-react";
-import db, { uid, now } from "../db";
+import { fetchFeedEvents, type FeedEvent } from "../feed";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  X,
+  CalendarDays,
+  Bell,
+  Pencil,
+} from "lucide-react";
+import db, { uid, now, type Occasion } from "../db";
 import { toDateStr, todayStr, timeLabel, dueLabel } from "../dates";
 import { syncReminders } from "../reminders";
 import { getHouseholdRealmId } from "../household";
@@ -91,6 +100,151 @@ function AddEventForm({ date }: { date: string }) {
   );
 }
 
+const OCCASION_EMOJI = ["🎂", "💍", "🎉", "🕯️", "🎓", "👶"];
+
+// The next calendar date this occasion lands on (this year or next).
+export function nextOccasionDate(o: { month: number; day: number }): string {
+  const today = todayStr();
+  const y = Number(today.slice(0, 4));
+  const thisYear = toDateStr(new Date(y, o.month - 1, o.day));
+  return thisYear >= today
+    ? thisYear
+    : toDateStr(new Date(y + 1, o.month - 1, o.day));
+}
+
+function OccasionsSection() {
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState("");
+  const [emoji, setEmoji] = useState("🎂");
+  const [date, setDate] = useState("");
+  const occasions = useLiveQuery(
+    () => db.occasions.orderBy("createdAt").toArray(),
+    [],
+    [] as Occasion[]
+  );
+
+  const add = async () => {
+    if (!name.trim() || !date) return;
+    const [, m, d] = date.split("-").map(Number);
+    const { getHouseholdRealmId } = await import("../household");
+    await db.occasions.add({
+      id: uid(),
+      name: name.trim(),
+      emoji,
+      month: m,
+      day: d,
+      realmId: await getHouseholdRealmId(),
+      createdAt: now(),
+      updatedAt: now(),
+    });
+    const { syncReminders } = await import("../reminders");
+    syncReminders();
+    setName("");
+    setDate("");
+  };
+
+  const sorted = [...occasions].sort((a, b) =>
+    nextOccasionDate(a).localeCompare(nextOccasionDate(b))
+  );
+
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between px-1">
+        <p className="text-xs font-medium uppercase tracking-wide text-muted">
+          Birthdays & anniversaries
+        </p>
+        <button
+          onClick={() => setEditing(!editing)}
+          className="flex items-center gap-1 text-xs text-muted underline-offset-2 hover:underline"
+        >
+          <Pencil size={12} /> {editing ? "Done" : "Edit"}
+        </button>
+      </div>
+      <div className="space-y-2">
+        {occasions.length === 0 && !editing && (
+          <p className="rounded-xl border border-dashed border-line px-3.5 py-4 text-center text-sm text-muted">
+            Add birthdays and anniversaries — they repeat every year and
+            remind you 3 days out and on the day.
+          </p>
+        )}
+        {sorted.map((o) => {
+          const next = nextOccasionDate(o);
+          return (
+            <div
+              key={o.id}
+              className="flex items-center gap-3 rounded-xl border border-line bg-surface px-3.5 py-2.5"
+            >
+              <span className="text-lg">{o.emoji}</span>
+              <span className="min-w-0 flex-1 truncate text-sm">{o.name}</span>
+              <span
+                className={`shrink-0 text-xs font-medium ${
+                  next === todayStr() ? "text-accent" : "text-muted"
+                }`}
+              >
+                {next === todayStr() ? "Today 🎉" : dueLabel(next)}
+              </span>
+              {editing && (
+                <button
+                  onClick={async () => {
+                    await db.occasions.delete(o.id);
+                    const { syncReminders } = await import("../reminders");
+                    syncReminders();
+                  }}
+                  aria-label={`Delete ${o.name}`}
+                  className="p-1 text-muted hover:text-red-500"
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+          );
+        })}
+        {editing && (
+          <div className="space-y-2.5 rounded-xl border border-dashed border-line p-3.5">
+            <div className="flex gap-2">
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Who or what — e.g. Mum's birthday"
+                className="min-w-0 flex-1 rounded-xl border border-line bg-bg px-3.5 py-2.5 text-sm outline-none placeholder:text-muted focus:border-accent"
+              />
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                aria-label="Date (the year is ignored)"
+                className="shrink-0 rounded-xl border border-line bg-bg px-2 py-2.5 text-sm text-muted outline-none focus:border-accent"
+              />
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {OCCASION_EMOJI.map((e) => (
+                <button
+                  key={e}
+                  onClick={() => setEmoji(e)}
+                  aria-label={`Choose ${e}`}
+                  className={`rounded-lg p-1 text-base transition-colors ${
+                    emoji === e
+                      ? "bg-accent-soft ring-1 ring-accent/50"
+                      : "hover:bg-surface-2"
+                  }`}
+                >
+                  {e}
+                </button>
+              ))}
+              <button
+                onClick={add}
+                className="ml-auto rounded-xl bg-accent px-3 py-1.5 text-xs font-semibold text-white dark:text-bg"
+              >
+                Add
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function Calendar() {
   const today = todayStr();
   const [view, setView] = useState(() => {
@@ -118,10 +272,34 @@ export default function Calendar() {
     () => db.events.where("date").equals(selected).toArray(),
     [selected]
   );
+  const occasions = useLiveQuery(
+    () => db.occasions.toArray(),
+    [],
+    [] as Occasion[]
+  );
+  const [feed, setFeed] = useState<FeedEvent[]>([]);
+  useEffect(() => {
+    fetchFeedEvents().then(setFeed);
+  }, []);
 
   const countByDay = new Map<string, number>();
   monthEvents?.forEach((e) =>
     countByDay.set(e.date, (countByDay.get(e.date) ?? 0) + 1)
+  );
+  // occasions land on their month/day every year
+  occasions.forEach((o) => {
+    if (o.month === m + 1) {
+      const key = toDateStr(new Date(y, m, o.day));
+      countByDay.set(key, (countByDay.get(key) ?? 0) + 1);
+    }
+  });
+  feed.forEach((f) =>
+    countByDay.set(f.date, (countByDay.get(f.date) ?? 0) + 1)
+  );
+  const feedDay = feed.filter((f) => f.date === selected);
+  const [, selM, selD] = selected.split("-").map(Number);
+  const dayOccasions = occasions.filter(
+    (o) => o.month === selM && o.day === selD
   );
 
   // all-day events first, then by time
@@ -245,7 +423,48 @@ export default function Calendar() {
 
         <AddEventForm date={selected} />
 
-        {agenda.length === 0 && (
+        {dayOccasions.length > 0 && (
+          <ul className="space-y-2">
+            {dayOccasions.map((o) => (
+              <li
+                key={o.id}
+                className="flex items-center gap-3 rounded-xl border border-accent-soft bg-surface px-3.5 py-3"
+              >
+                <span className="w-16 shrink-0 text-xs font-medium text-accent">
+                  Every year
+                </span>
+                <span className="min-w-0 flex-1 break-words text-sm">
+                  {o.emoji} {o.name}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {feedDay.length > 0 && (
+          <ul className="space-y-2">
+            {feedDay
+              .sort((a, b) => (a.time ?? "").localeCompare(b.time ?? ""))
+              .map((f) => (
+                <li
+                  key={f.id}
+                  className="flex items-center gap-3 rounded-xl border border-line bg-surface px-3.5 py-3 opacity-75"
+                >
+                  <span className="w-16 shrink-0 text-xs font-medium text-muted">
+                    {f.time ? timeLabel(f.time) : "All day"}
+                  </span>
+                  <span className="min-w-0 flex-1 break-words text-sm">
+                    {f.title}
+                  </span>
+                  <span className="shrink-0 text-[10px] font-medium uppercase text-muted">
+                    feed
+                  </span>
+                </li>
+              ))}
+          </ul>
+        )}
+
+        {agenda.length === 0 && dayOccasions.length === 0 && feedDay.length === 0 && (
           <div className="flex flex-col items-center rounded-2xl border border-dashed border-line bg-surface px-6 py-10 text-center">
             <div className="mb-3 rounded-2xl bg-accent-soft p-3 text-accent">
               <CalendarDays size={24} strokeWidth={1.75} />
@@ -284,6 +503,8 @@ export default function Calendar() {
           ))}
         </ul>
       </div>
+
+      <OccasionsSection />
     </div>
   );
 }

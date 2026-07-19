@@ -20,6 +20,8 @@ const TABLES = [
   "mealPlans",
   "notes",
   "staples",
+  "occasions",
+  "goals",
 ] as const;
 
 const SETTINGS_KEY = "lifetime-settings";

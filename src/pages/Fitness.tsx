@@ -691,6 +691,38 @@ const PREMADE: { name: string; emoji: string; exercises: string[] }[] = [
       "Mountain climbers",
     ],
   },
+  {
+    name: "Dumbbell full body",
+    emoji: "🏋️",
+    exercises: [
+      "Goblet squats",
+      "Dumbbell floor press",
+      "Dumbbell rows",
+      "Shoulder press",
+      "Romanian deadlifts",
+    ],
+  },
+  {
+    name: "Dumbbell upper body",
+    emoji: "💪",
+    exercises: [
+      "Dumbbell bench press",
+      "Dumbbell rows",
+      "Bicep curls",
+      "Overhead press",
+      "Lateral raises",
+    ],
+  },
+  {
+    name: "15-minute blast",
+    emoji: "⏱️",
+    exercises: ["Burpees", "Push-ups", "Squats", "Plank", "High knees"],
+  },
+  {
+    name: "Morning wake-up",
+    emoji: "🌅",
+    exercises: ["Stretching", "Jumping jacks", "Squats", "Plank"],
+  },
 ];
 
 function AddRoutineForm() {

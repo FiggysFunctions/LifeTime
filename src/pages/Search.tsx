@@ -46,6 +46,7 @@ export default function Search() {
   const cardio = useLiveQuery(() => db.cardio.toArray(), [], []);
   const habits = useLiveQuery(() => db.habits.toArray(), [], []);
   const notes = useLiveQuery(() => db.notes.toArray(), [], []);
+  const occasions = useLiveQuery(() => db.occasions.toArray(), [], []);
 
   const listById = new Map(lists.map((l) => [l.id, l]));
   const catById = new Map(categories.map((c) => [c.id, c]));
@@ -98,14 +99,24 @@ export default function Search() {
           {
             label: "Calendar",
             icon: CalendarDays,
-            results: events
-              .filter((e) => match(e.title))
-              .map((e) => ({
-                id: `event-${e.id}`,
-                title: e.title,
-                context: `${dueLabel(e.date)}${e.time ? ` · ${timeLabel(e.time)}` : ""}`,
-                to: "/calendar",
-              })),
+            results: [
+              ...events
+                .filter((e) => match(e.title))
+                .map((e) => ({
+                  id: `event-${e.id}`,
+                  title: e.title,
+                  context: `${dueLabel(e.date)}${e.time ? ` · ${timeLabel(e.time)}` : ""}`,
+                  to: "/calendar",
+                })),
+              ...occasions
+                .filter((o) => match(o.name))
+                .map((o) => ({
+                  id: `occ-${o.id}`,
+                  title: `${o.emoji} ${o.name}`,
+                  context: `Every year · ${new Date(2000, o.month - 1, o.day).toLocaleDateString(undefined, { day: "numeric", month: "short" })}`,
+                  to: "/calendar",
+                })),
+            ],
           },
           {
             label: "Budget",

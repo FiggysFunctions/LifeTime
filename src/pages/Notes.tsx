@@ -12,6 +12,16 @@ import { PageHeader, Card, Button } from "../components/ui";
 const firstLine = (text: string) => text.split("\n")[0].trim() || "Untitled";
 const rest = (text: string) => text.split("\n").slice(1).join("\n").trim();
 
+// The note everyone means to write and never does.
+const EMERGENCY_TEMPLATE = `🆘 Emergency info
+Emergency contacts:
+Doctor / medical centre:
+Medicare & health insurance:
+Home & car policy numbers:
+Plumber:
+Electrician:
+Vet:`;
+
 function NoteCard({
   note,
   householdId,
@@ -155,11 +165,20 @@ export default function Notes() {
             placeholder={"First line is the title\nthen anything — wifi password, car rego, gift ideas…"}
             className="w-full resize-none rounded-xl border border-line bg-bg px-3.5 py-2.5 text-sm outline-none placeholder:text-muted focus:border-accent"
           />
-          <div className="mt-2.5 flex gap-2">
+          <div className="mt-2.5 flex flex-wrap gap-2">
             <Button onClick={create}>Add note</Button>
             <Button variant="ghost" onClick={() => setCreating(false)}>
               Cancel
             </Button>
+            {!notes.some((n) => n.text.startsWith("🆘 Emergency info")) &&
+              !draft && (
+                <button
+                  onClick={() => setDraft(EMERGENCY_TEMPLATE)}
+                  className="text-xs text-muted underline-offset-2 hover:underline"
+                >
+                  Start from the 🆘 emergency info template
+                </button>
+              )}
           </div>
           {householdId && (
             <p className="mt-2 text-xs text-muted">

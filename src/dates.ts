@@ -30,7 +30,7 @@ export const addMonths = (dateStr: string, n: number) => {
 // overdue item jumps to its next real occurrence, not a date in the past.
 export function nextOccurrence(
   due: string,
-  recurrence: Exclude<Recurrence, "none"> | "yearly"
+  recurrence: Exclude<Recurrence, "none">
 ): string {
   const today = todayStr();
   let next = due;

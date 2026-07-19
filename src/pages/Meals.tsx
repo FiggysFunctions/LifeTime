@@ -66,6 +66,46 @@ const SUGGESTED_MEALS: { name: string; emoji: string; ingredients: string[] }[] 
     emoji: "🍤",
     ingredients: ["Spaghetti", "Prawns", "Garlic", "Cream", "Parsley", "Parmesan"],
   },
+  {
+    name: "Chicken noodle soup",
+    emoji: "🍜",
+    ingredients: ["Chicken thighs", "Rice noodles", "Chicken stock", "Carrots", "Celery"],
+  },
+  {
+    name: "Teriyaki salmon bowl",
+    emoji: "🍚",
+    ingredients: ["Salmon fillets", "Rice", "Teriyaki sauce", "Edamame", "Cucumber"],
+  },
+  {
+    name: "Prawn fried rice",
+    emoji: "🥘",
+    ingredients: ["Prawns", "Rice", "Peas", "Eggs", "Soy sauce", "Spring onion"],
+  },
+  {
+    name: "Lemon chicken tray bake",
+    emoji: "🍋",
+    ingredients: ["Chicken thighs", "Baby potatoes", "Lemon", "Rosemary", "Green beans"],
+  },
+  {
+    name: "Chicken burritos",
+    emoji: "🌯",
+    ingredients: ["Tortillas", "Chicken breast", "Rice", "Black beans", "Cheese", "Salsa"],
+  },
+  {
+    name: "Slow-cooker chicken soup",
+    emoji: "🍲",
+    ingredients: ["Chicken thighs", "Carrots", "Celery", "Onion", "Chicken stock"],
+  },
+  {
+    name: "Homemade fish & chips",
+    emoji: "🐟",
+    ingredients: ["White fish fillets", "Potatoes", "Frozen peas", "Lemon"],
+  },
+  {
+    name: "Greek chicken pitas",
+    emoji: "🥙",
+    ingredients: ["Chicken breast", "Pita bread", "Tzatziki", "Cucumber", "Tomato", "Red onion"],
+  },
 ];
 
 const QUICK_ENTRIES = [

@@ -218,10 +218,37 @@ export async function syncReminders() {
       };
     });
 
+    // Birthdays & anniversaries: a heads-up 3 days out and one on the day.
+    const occasions = await db.occasions.toArray();
+    const today = todayStr();
+    const yearNow = Number(today.slice(0, 4));
+    const occReminders = occasions.flatMap((o) => {
+      let dateStr = toDateStr(new Date(yearNow, o.month - 1, o.day));
+      if (dateStr < today)
+        dateStr = toDateStr(new Date(yearNow + 1, o.month - 1, o.day));
+      return [
+        {
+          id: `occ-${o.id}-pre`,
+          title: `${o.emoji} ${o.name} in 3 days`,
+          body: "Time to sort a card or a gift?",
+          at: nineAm(addDays(dateStr, -3)),
+          url: "/#/calendar",
+        },
+        {
+          id: `occ-${o.id}-day`,
+          title: `${o.emoji} ${o.name} — today!`,
+          body: "",
+          at: nineAm(dateStr),
+          url: "/#/calendar",
+        },
+      ];
+    });
+
     const digest = await buildDigest();
     const reminders = [
       ...eventReminders,
       ...billReminders,
+      ...occReminders,
       ...(digest ? [digest] : []),
     ]
       .filter((r) => r.at > nowMs - 60_000 && r.at < nowMs + 60 * 86_400_000)

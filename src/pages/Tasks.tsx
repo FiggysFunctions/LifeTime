@@ -164,7 +164,7 @@ function NewTaskForm({
           Repeat
         </p>
         <div className="flex gap-1.5">
-          {(["none", "daily", "weekly", "monthly"] as const).map((r) => (
+          {(["none", "daily", "weekly", "monthly", "yearly"] as const).map((r) => (
             <Chip key={r} active={recurrence === r} onClick={() => setRecurrence(r)}>
               {r === "none" ? "Never" : r[0].toUpperCase() + r.slice(1)}
             </Chip>
@@ -224,6 +224,57 @@ function TaskRow({ task, householdId }: { task: Task; householdId?: string }) {
         <X size={16} />
       </button>
     </li>
+  );
+}
+
+// Ready-made recurring chores nothing else in the app nudges you about.
+const UPKEEP: { title: string; recurrence: Recurrence }[] = [
+  { title: "🔋 Test the smoke alarms", recurrence: "monthly" },
+  { title: "🧽 Clean the range hood filter", recurrence: "monthly" },
+  { title: "🛏️ Change the bed sheets", recurrence: "weekly" },
+  { title: "🧹 Clear the gutters", recurrence: "yearly" },
+  { title: "🚗 Book the car service", recurrence: "yearly" },
+  { title: "🧯 Check first aid kit & extinguisher", recurrence: "yearly" },
+];
+
+function UpkeepPack({ tasks }: { tasks: Task[] }) {
+  const [open, setOpen] = useState(false);
+  const have = new Set(tasks.map((t) => t.title.trim().toLowerCase()));
+  const available = UPKEEP.filter((u) => !have.has(u.title.toLowerCase()));
+  if (available.length === 0) return null;
+
+  const add = (u: (typeof UPKEEP)[number]) =>
+    db.tasks.add({
+      id: uid(),
+      title: u.title,
+      priority: "low",
+      due: todayStr(),
+      recurrence: u.recurrence,
+      done: false,
+      completedAt: null,
+      createdAt: now(),
+      updatedAt: now(),
+    });
+
+  return (
+    <div className="rounded-xl border border-dashed border-line p-3.5">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center justify-between text-left text-sm text-muted"
+      >
+        <span>🏠 Home upkeep pack — ready-made recurring chores</span>
+        <span className="text-xs">{open ? "Hide" : "Show"}</span>
+      </button>
+      {open && (
+        <div className="mt-2.5 flex flex-wrap gap-1.5">
+          {available.map((u) => (
+            <Chip key={u.title} active={false} onClick={() => add(u)}>
+              + {u.title} · {u.recurrence}
+            </Chip>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -336,6 +387,8 @@ export default function Tasks() {
       <Section label="Today" tone="text-accent" tasks={dueToday} householdId={householdId} />
       <Section label="Upcoming" tasks={upcoming} householdId={householdId} />
       <Section label="Someday" tasks={someday} householdId={householdId} />
+
+      <UpkeepPack tasks={tasks ?? []} />
 
       {done.length > 0 && (
         <div>
