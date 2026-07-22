@@ -80,6 +80,27 @@ export interface Expense {
   updatedAt: number;
 }
 
+export type IncomeFrequency = "weekly" | "fortnightly" | "monthly" | "yearly";
+
+export interface Income {
+  id: string;
+  name: string;
+  emoji: string;
+  amount: number;
+  frequency: IncomeFrequency;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface Account {
+  id: string;
+  name: string;
+  emoji: string;
+  balance: number; // manually maintained; the "what have I got" figure
+  createdAt: number;
+  updatedAt: number;
+}
+
 export type BillFrequency = "once" | "weekly" | "monthly" | "yearly";
 
 export interface Bill {
@@ -234,6 +255,8 @@ const db = new Dexie("lifetime", { addons: [dexieCloud] }) as Dexie & {
   staples: EntityTable<Staple, "id">;
   occasions: EntityTable<Occasion, "id">;
   goals: EntityTable<Goal, "id">;
+  incomes: EntityTable<Income, "id">;
+  accounts: EntityTable<Account, "id">;
 };
 
 db.version(1).stores({
@@ -302,6 +325,12 @@ db.version(11).stores({
 db.version(12).stores({
   occasions: "id, createdAt",
   goals: "id, createdAt",
+});
+
+// v13 — Phase 17: income sources + savings account balances (personal).
+db.version(13).stores({
+  incomes: "id, createdAt",
+  accounts: "id, createdAt",
 });
 
 // Sync is opt-in: without a database URL (or before signing in) the app

@@ -61,6 +61,9 @@ From now on, any change committed to the GitHub repo redeploys automatically.
   a read-only work-calendar feed (paste an iCal link in Settings), a
   home-upkeep task pack, more meal & workout starters, and an emergency
   info note template
+- **Phase 17 — Money & home** ✅ income sources with a "left this month"
+  net position, manual savings-account balances, and a customisable Home
+  (hide and reorder the shortcut tiles)
 
 ## Sync
 

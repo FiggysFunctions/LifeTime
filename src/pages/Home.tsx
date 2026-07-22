@@ -18,6 +18,10 @@ import {
   Pencil,
   X,
   Download,
+  ChevronUp,
+  ChevronDown,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import db, { uid, now, type Habit } from "../db";
 import { todayStr, addDays, timeLabel, dueLabel } from "../dates";
@@ -665,7 +669,8 @@ function BackupNudge() {
 }
 
 export default function Home() {
-  const { settings } = useSettings();
+  const { settings, update } = useSettings();
+  const [editingHome, setEditingHome] = useState(false);
   const nowDate = new Date();
   const today = todayStr();
   const dateLabel = nowDate.toLocaleDateString(undefined, {
@@ -880,6 +885,35 @@ export default function Home() {
     },
   ];
 
+  // Apply the user's saved order (unknown/new modules append) and hidden set.
+  const orderKeys = settings.homeOrder ?? [];
+  const hidden = new Set(settings.homeHidden ?? []);
+  const orderedModules = [
+    ...orderKeys
+      .map((k) => modules.find((m) => m.to === k))
+      .filter((m): m is (typeof modules)[number] => !!m),
+    ...modules.filter((m) => !orderKeys.includes(m.to)),
+  ];
+  const visibleModules = editingHome
+    ? orderedModules
+    : orderedModules.filter((m) => !hidden.has(m.to));
+
+  const moveModule = (key: string, dir: -1 | 1) => {
+    const keys = orderedModules.map((m) => m.to);
+    const idx = keys.indexOf(key);
+    const swap = idx + dir;
+    if (swap < 0 || swap >= keys.length) return;
+    [keys[idx], keys[swap]] = [keys[swap], keys[idx]];
+    update({ homeOrder: keys });
+  };
+
+  const toggleHide = (key: string) => {
+    const h = new Set(hidden);
+    if (h.has(key)) h.delete(key);
+    else h.add(key);
+    update({ homeHidden: [...h] });
+  };
+
   const name =
     settings.name && settings.name !== "friend" ? `, ${settings.name}` : "";
 
@@ -1031,19 +1065,77 @@ export default function Home() {
 
       <BackupNudge />
 
-      <div className="grid grid-cols-2 gap-3">
-        {modules.map((m) => (
-          <Link key={m.to} to={m.to}>
-            <Card className="h-full transition-colors hover:border-accent-soft">
-              <div className="mb-3 inline-flex rounded-xl bg-accent-soft p-2.5 text-accent">
-                <m.icon size={20} strokeWidth={2} />
-              </div>
-              <p className="font-medium">{m.label}</p>
-              <p className="mt-0.5 text-xs text-muted">{m.desc}</p>
-            </Card>
-          </Link>
-        ))}
+      <div className="flex items-center justify-between px-1">
+        <p className="text-xs font-medium uppercase tracking-wide text-muted">
+          Shortcuts
+        </p>
+        <button
+          onClick={() => setEditingHome(!editingHome)}
+          className="flex items-center gap-1 text-xs text-muted underline-offset-2 hover:underline"
+        >
+          <Pencil size={12} /> {editingHome ? "Done" : "Customise"}
+        </button>
       </div>
+
+      {editingHome ? (
+        <div className="space-y-2">
+          {orderedModules.map((m, i) => {
+            const isHidden = hidden.has(m.to);
+            return (
+              <div
+                key={m.to}
+                className={`flex items-center gap-3 rounded-xl border border-line bg-surface px-3.5 py-2.5 ${
+                  isHidden ? "opacity-50" : ""
+                }`}
+              >
+                <span className="rounded-lg bg-accent-soft p-1.5 text-accent">
+                  <m.icon size={16} />
+                </span>
+                <span className="min-w-0 flex-1 truncate text-sm">
+                  {m.label}
+                </span>
+                <button
+                  onClick={() => moveModule(m.to, -1)}
+                  disabled={i === 0}
+                  aria-label={`Move ${m.label} up`}
+                  className="p-1 text-muted hover:text-ink disabled:opacity-30"
+                >
+                  <ChevronUp size={16} />
+                </button>
+                <button
+                  onClick={() => moveModule(m.to, 1)}
+                  disabled={i === orderedModules.length - 1}
+                  aria-label={`Move ${m.label} down`}
+                  className="p-1 text-muted hover:text-ink disabled:opacity-30"
+                >
+                  <ChevronDown size={16} />
+                </button>
+                <button
+                  onClick={() => toggleHide(m.to)}
+                  aria-label={isHidden ? `Show ${m.label}` : `Hide ${m.label}`}
+                  className="p-1 text-muted hover:text-ink"
+                >
+                  {isHidden ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          {visibleModules.map((m) => (
+            <Link key={m.to} to={m.to}>
+              <Card className="h-full transition-colors hover:border-accent-soft">
+                <div className="mb-3 inline-flex rounded-xl bg-accent-soft p-2.5 text-accent">
+                  <m.icon size={20} strokeWidth={2} />
+                </div>
+                <p className="font-medium">{m.label}</p>
+                <p className="mt-0.5 text-xs text-muted">{m.desc}</p>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

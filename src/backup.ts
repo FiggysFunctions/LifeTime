@@ -22,6 +22,8 @@ const TABLES = [
   "staples",
   "occasions",
   "goals",
+  "incomes",
+  "accounts",
 ] as const;
 
 const SETTINGS_KEY = "lifetime-settings";

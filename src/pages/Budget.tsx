@@ -8,6 +8,8 @@ import {
   X,
   Pencil,
   PiggyBank,
+  Wallet,
+  Landmark,
 } from "lucide-react";
 import db, {
   uid,
@@ -16,6 +18,8 @@ import db, {
   type Expense,
   type Bill,
   type BillFrequency,
+  type Income,
+  type IncomeFrequency,
 } from "../db";
 import { toDateStr, todayStr, addDays, dueLabel, nextOccurrence } from "../dates";
 import { fmtMoney, parseAmount } from "../money";
@@ -73,6 +77,32 @@ const monthlyEquiv = (b: Bill) =>
       : b.frequency === "yearly"
         ? b.amount / 12
         : 0;
+
+// ---- income (recurring sources; personal like the rest of Budget) ----
+const INCOME_EMOJI = ["💼", "💰", "🏦", "📈", "🎨", "🏡", "👶", "➕"];
+
+const INCOME_FREQS: { id: IncomeFrequency; label: string }[] = [
+  { id: "monthly", label: "Monthly" },
+  { id: "fortnightly", label: "Fortnightly" },
+  { id: "weekly", label: "Weekly" },
+  { id: "yearly", label: "Yearly" },
+];
+
+const INCOME_FREQ_LABEL: Record<IncomeFrequency, string> = {
+  weekly: "Weekly",
+  fortnightly: "Fortnightly",
+  monthly: "Monthly",
+  yearly: "Yearly",
+};
+
+const incomeMonthly = (i: Income) =>
+  i.frequency === "weekly"
+    ? (i.amount * 52) / 12
+    : i.frequency === "fortnightly"
+      ? (i.amount * 26) / 12
+      : i.frequency === "monthly"
+        ? i.amount
+        : i.amount / 12;
 
 // Payments land in the bill's chosen category, or an auto-created "Bills".
 async function billCategoryId(bill: Bill, categories: Category[]) {
@@ -488,6 +518,396 @@ function BillsSection({
               </span>
             </div>
           ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+function IncomeEditRow({ income }: { income: Income }) {
+  const { settings } = useSettings();
+  const [amount, setAmount] = useState(String(income.amount));
+
+  const saveAmount = () => {
+    const n = parseAmount(amount);
+    if (n !== null) db.incomes.update(income.id, { amount: n, updatedAt: now() });
+  };
+
+  return (
+    <div className="flex items-center gap-2 rounded-xl border border-line bg-surface px-3.5 py-2.5">
+      <span className="text-lg">{income.emoji}</span>
+      <span className="min-w-0 flex-1 truncate text-sm">{income.name}</span>
+      <div className="flex items-center rounded-lg border border-line bg-bg focus-within:border-accent">
+        <span className="pl-2 text-xs text-muted">{settings.currency}</span>
+        <input
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          onBlur={saveAmount}
+          onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+          inputMode="decimal"
+          aria-label={`Amount for ${income.name}`}
+          className="w-16 bg-transparent px-1.5 py-1.5 text-xs outline-none"
+        />
+      </div>
+      <select
+        value={income.frequency}
+        onChange={(e) =>
+          db.incomes.update(income.id, {
+            frequency: e.target.value as IncomeFrequency,
+            updatedAt: now(),
+          })
+        }
+        aria-label={`How often ${income.name}`}
+        className="rounded-lg border border-line bg-bg px-1.5 py-1.5 text-xs text-muted outline-none focus:border-accent"
+      >
+        {INCOME_FREQS.map((f) => (
+          <option key={f.id} value={f.id}>
+            {f.label}
+          </option>
+        ))}
+      </select>
+      <button
+        onClick={() => db.incomes.delete(income.id)}
+        aria-label={`Delete ${income.name}`}
+        className="p-1 text-muted hover:text-red-500"
+      >
+        <X size={16} />
+      </button>
+    </div>
+  );
+}
+
+function AddIncomeForm() {
+  const { settings } = useSettings();
+  const [name, setName] = useState("");
+  const [emoji, setEmoji] = useState("💼");
+  const [amount, setAmount] = useState("");
+  const [frequency, setFrequency] = useState<IncomeFrequency>("monthly");
+
+  const create = async () => {
+    const n = parseAmount(amount);
+    if (!name.trim() || n === null) return;
+    await db.incomes.add({
+      id: uid(),
+      name: name.trim(),
+      emoji,
+      amount: n,
+      frequency,
+      createdAt: now(),
+      updatedAt: now(),
+    });
+    setName("");
+    setAmount("");
+  };
+
+  return (
+    <div className="space-y-2.5 rounded-xl border border-dashed border-line p-3.5">
+      <div className="flex gap-2">
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Income — e.g. Salary, Side gig"
+          className="min-w-0 flex-1 rounded-xl border border-line bg-bg px-3.5 py-2.5 text-sm outline-none placeholder:text-muted focus:border-accent"
+        />
+        <div className="flex shrink-0 items-center rounded-xl border border-line bg-bg focus-within:border-accent">
+          <span className="pl-2.5 text-xs text-muted">{settings.currency}</span>
+          <input
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="0.00"
+            inputMode="decimal"
+            aria-label="Income amount"
+            className="w-16 bg-transparent px-1.5 py-2.5 text-sm outline-none placeholder:text-muted"
+          />
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {INCOME_EMOJI.map((e) => (
+          <button
+            key={e}
+            onClick={() => setEmoji(e)}
+            aria-label={`Choose ${e}`}
+            className={`rounded-lg p-1 text-base transition-colors ${
+              emoji === e ? "bg-accent-soft ring-1 ring-accent/50" : "hover:bg-surface-2"
+            }`}
+          >
+            {e}
+          </button>
+        ))}
+      </div>
+      <div className="flex flex-wrap items-center gap-1.5">
+        {INCOME_FREQS.map((f) => (
+          <Chip
+            key={f.id}
+            active={frequency === f.id}
+            onClick={() => setFrequency(f.id)}
+          >
+            {f.label}
+          </Chip>
+        ))}
+        <button
+          onClick={create}
+          className="ml-auto rounded-xl bg-accent px-3 py-2 text-xs font-semibold text-white dark:text-bg"
+        >
+          Add income
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function IncomeSection({ incomes }: { incomes: Income[] }) {
+  const { settings } = useSettings();
+  const [editing, setEditing] = useState(false);
+  const perMonth = incomes.reduce((s, i) => s + incomeMonthly(i), 0);
+  const sorted = [...incomes].sort(
+    (a, b) => incomeMonthly(b) - incomeMonthly(a) || a.createdAt - b.createdAt
+  );
+
+  if (incomes.length === 0 && !editing)
+    return (
+      <div>
+        <div className="mb-2 flex items-center justify-between px-1">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted">
+            Income
+          </p>
+          <button
+            onClick={() => setEditing(true)}
+            className="flex items-center gap-1 text-xs text-muted underline-offset-2 hover:underline"
+          >
+            <Pencil size={12} /> Edit
+          </button>
+        </div>
+        <p className="rounded-xl border border-dashed border-line px-3.5 py-4 text-center text-sm text-muted">
+          Add your pay and any other income to see what's left each month.
+        </p>
+      </div>
+    );
+
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between px-1">
+        <p className="text-xs font-medium uppercase tracking-wide text-muted">
+          Income
+        </p>
+        <button
+          onClick={() => setEditing(!editing)}
+          className="flex items-center gap-1 text-xs text-muted underline-offset-2 hover:underline"
+        >
+          <Pencil size={12} /> {editing ? "Done" : "Edit"}
+        </button>
+      </div>
+      {perMonth > 0 && (
+        <p className="mb-2 px-1 text-xs text-muted">
+          ≈ {fmtMoney(perMonth, settings.currency)} a month coming in
+        </p>
+      )}
+      <div className="space-y-2">
+        {editing ? (
+          <>
+            {sorted.map((i) => (
+              <IncomeEditRow key={i.id} income={i} />
+            ))}
+            <AddIncomeForm />
+          </>
+        ) : (
+          sorted.map((i) => (
+            <div
+              key={i.id}
+              className="flex items-center gap-3 rounded-xl border border-line bg-surface px-3.5 py-2.5"
+            >
+              <span className="text-lg">{i.emoji}</span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm">{i.name}</p>
+                <p className="truncate text-xs text-muted">
+                  {INCOME_FREQ_LABEL[i.frequency]}
+                </p>
+              </div>
+              <span className="text-sm font-medium">
+                {fmtMoney(i.amount, settings.currency)}
+              </span>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ---- savings account balances (manual; personal) ----
+const ACCOUNT_EMOJI = ["🏦", "💰", "🐷", "💳", "📈", "🏠", "✈️", "🎁"];
+
+function AccountsSection() {
+  const { settings } = useSettings();
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState("");
+  const [emoji, setEmoji] = useState("🏦");
+  const [balance, setBalance] = useState("");
+  const accounts = useLiveQuery(
+    () => db.accounts.orderBy("createdAt").toArray(),
+    [],
+    []
+  );
+
+  const total = accounts.reduce((s, a) => s + a.balance, 0);
+
+  const create = async () => {
+    const n = parseAmount(balance);
+    if (!name.trim() || n === null) return;
+    await db.accounts.add({
+      id: uid(),
+      name: name.trim(),
+      emoji,
+      balance: n,
+      createdAt: now(),
+      updatedAt: now(),
+    });
+    setName("");
+    setBalance("");
+  };
+
+  if (accounts.length === 0 && !editing)
+    return (
+      <div>
+        <div className="mb-2 flex items-center justify-between px-1">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted">
+            Savings & balances
+          </p>
+          <button
+            onClick={() => setEditing(true)}
+            className="flex items-center gap-1 text-xs text-muted underline-offset-2 hover:underline"
+          >
+            <Pencil size={12} /> Edit
+          </button>
+        </div>
+        <p className="rounded-xl border border-dashed border-line px-3.5 py-4 text-center text-sm text-muted">
+          Add your accounts and their balances — update them whenever you
+          like — to see everything you've got in one place.
+        </p>
+      </div>
+    );
+
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between px-1">
+        <p className="text-xs font-medium uppercase tracking-wide text-muted">
+          Savings & balances
+        </p>
+        <button
+          onClick={() => setEditing(!editing)}
+          className="flex items-center gap-1 text-xs text-muted underline-offset-2 hover:underline"
+        >
+          <Pencil size={12} /> {editing ? "Done" : "Edit"}
+        </button>
+      </div>
+      <Card className="mb-2">
+        <div className="flex items-center gap-3">
+          <span className="rounded-xl bg-accent-soft p-2 text-accent">
+            <Landmark size={18} />
+          </span>
+          <div>
+            <p className="font-display text-2xl font-semibold text-accent">
+              {fmtMoney(total, settings.currency)}
+            </p>
+            <p className="text-xs text-muted">across all accounts</p>
+          </div>
+        </div>
+      </Card>
+      <div className="space-y-2">
+        {accounts.map((a) =>
+          editing ? (
+            <div
+              key={a.id}
+              className="flex items-center gap-2 rounded-xl border border-line bg-surface px-3.5 py-2.5"
+            >
+              <span className="text-lg">{a.emoji}</span>
+              <span className="min-w-0 flex-1 truncate text-sm">{a.name}</span>
+              <div className="flex items-center rounded-lg border border-line bg-bg focus-within:border-accent">
+                <span className="pl-2 text-xs text-muted">
+                  {settings.currency}
+                </span>
+                <input
+                  defaultValue={String(a.balance)}
+                  onBlur={(e) => {
+                    const n = parseAmount(e.target.value);
+                    if (n !== null)
+                      db.accounts.update(a.id, { balance: n, updatedAt: now() });
+                  }}
+                  onKeyDown={(e) =>
+                    e.key === "Enter" && (e.target as HTMLInputElement).blur()
+                  }
+                  inputMode="decimal"
+                  aria-label={`Balance of ${a.name}`}
+                  className="w-24 bg-transparent px-1.5 py-1.5 text-xs outline-none"
+                />
+              </div>
+              <button
+                onClick={() => db.accounts.delete(a.id)}
+                aria-label={`Delete ${a.name}`}
+                className="p-1 text-muted hover:text-red-500"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          ) : (
+            <div
+              key={a.id}
+              className="flex items-center gap-3 rounded-xl border border-line bg-surface px-3.5 py-2.5"
+            >
+              <span className="text-lg">{a.emoji}</span>
+              <span className="min-w-0 flex-1 truncate text-sm">{a.name}</span>
+              <span className="text-sm font-medium">
+                {fmtMoney(a.balance, settings.currency)}
+              </span>
+            </div>
+          )
+        )}
+        {editing && (
+          <div className="space-y-2.5 rounded-xl border border-dashed border-line p-3.5">
+            <div className="flex gap-2">
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Account — e.g. Everyday, Savings"
+                className="min-w-0 flex-1 rounded-xl border border-line bg-bg px-3.5 py-2.5 text-sm outline-none placeholder:text-muted focus:border-accent"
+              />
+              <div className="flex shrink-0 items-center rounded-xl border border-line bg-bg focus-within:border-accent">
+                <span className="pl-2.5 text-xs text-muted">
+                  {settings.currency}
+                </span>
+                <input
+                  value={balance}
+                  onChange={(e) => setBalance(e.target.value)}
+                  placeholder="0.00"
+                  inputMode="decimal"
+                  aria-label="Account balance"
+                  className="w-20 bg-transparent px-1.5 py-2.5 text-sm outline-none placeholder:text-muted"
+                />
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {ACCOUNT_EMOJI.map((e) => (
+                <button
+                  key={e}
+                  onClick={() => setEmoji(e)}
+                  aria-label={`Choose ${e}`}
+                  className={`rounded-lg p-1 text-base transition-colors ${
+                    emoji === e
+                      ? "bg-accent-soft ring-1 ring-accent/50"
+                      : "hover:bg-surface-2"
+                  }`}
+                >
+                  {e}
+                </button>
+              ))}
+              <button
+                onClick={create}
+                className="ml-auto rounded-xl bg-accent px-3 py-1.5 text-xs font-semibold text-white dark:text-bg"
+              >
+                Add account
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </div>
@@ -996,6 +1416,7 @@ export default function Budget() {
     []
   );
   const bills = useLiveQuery(() => db.bills.orderBy("due").toArray(), []);
+  const incomes = useLiveQuery(() => db.incomes.orderBy("createdAt").toArray(), []);
   const trendExpenses = useLiveQuery(
     () =>
       db.expenses
@@ -1009,6 +1430,10 @@ export default function Budget() {
     e.date.startsWith(ym)
   );
   const spent = monthExpenses.reduce((s, e) => s + e.amount, 0);
+  const monthlyIncome = (incomes ?? []).reduce(
+    (s, i) => s + incomeMonthly(i),
+    0
+  );
   const totalBudget = (categories ?? []).reduce(
     (s, c) => s + (c.budget ?? 0),
     0
@@ -1075,8 +1500,10 @@ export default function Budget() {
         />
       )}
 
+      <IncomeSection incomes={incomes ?? []} />
       <UpcomingSection bills={bills ?? []} categories={categories} />
       <BillsSection bills={bills ?? []} categories={categories} />
+      <AccountsSection />
       <GoalsSection />
 
       {categories.length === 0 ? (
@@ -1148,6 +1575,35 @@ export default function Budget() {
                     width: `${Math.min((spent / totalBudget) * 100, 100)}%`,
                   }}
                 />
+              </div>
+            )}
+            {monthlyIncome > 0 && isCurrentMonth && (
+              <div className="mt-3 flex items-center gap-2 border-t border-line pt-3">
+                <Wallet size={15} className="shrink-0 text-muted" />
+                <p className="text-sm">
+                  {monthlyIncome - spent >= 0 ? (
+                    <>
+                      <span className="font-semibold text-accent">
+                        {fmtMoney(monthlyIncome - spent, settings.currency)}
+                      </span>
+                      <span className="text-muted">
+                        {" "}
+                        left of {fmtMoney(monthlyIncome, settings.currency)}{" "}
+                        income
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="font-semibold text-red-500 dark:text-red-400">
+                        {fmtMoney(spent - monthlyIncome, settings.currency)} over
+                      </span>
+                      <span className="text-muted">
+                        {" "}
+                        your {fmtMoney(monthlyIncome, settings.currency)} income
+                      </span>
+                    </>
+                  )}
+                </p>
               </div>
             )}
           </Card>

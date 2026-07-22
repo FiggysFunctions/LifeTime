@@ -31,6 +31,8 @@ interface Settings {
   weeklyGoal: number; // active days per week target
   favTeams: string[]; // highlighted teams on the Sports page
   weeklyDigest: boolean; // Sunday-evening summary push
+  homeOrder: string[]; // module keys in display order (missing keys append)
+  homeHidden: string[]; // module keys hidden from the Home grid
 }
 
 const DEFAULTS: Settings = {
@@ -42,6 +44,8 @@ const DEFAULTS: Settings = {
   weeklyGoal: 3,
   favTeams: [],
   weeklyDigest: true,
+  homeOrder: [],
+  homeHidden: [],
 };
 const KEY = "lifetime-settings";
 

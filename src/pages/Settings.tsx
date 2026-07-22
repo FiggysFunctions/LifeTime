@@ -576,7 +576,7 @@ export default function Settings() {
       </Card>
 
       <p className="pt-2 text-center text-xs text-muted">
-        Lifetime v1.2 · your whole life, one app
+        Lifetime v1.3 · your whole life, one app
       </p>
     </div>
   );
