@@ -64,6 +64,10 @@ From now on, any change committed to the GitHub repo redeploys automatically.
 - **Phase 17 — Money & home** ✅ income sources with a "left this month"
   net position, manual savings-account balances, and a customisable Home
   (hide and reorder the shortcut tiles)
+- **Phase 18 — Focus (ADHD-friendly)** ✅ a distraction-free focus mode
+  with a visual Pomodoro timer, break tasks into tickable micro-steps,
+  "Pick one for me" to beat decision paralysis, and a little confetti
+  celebration (respecting reduced-motion) when you finish
 
 ## Sync
 

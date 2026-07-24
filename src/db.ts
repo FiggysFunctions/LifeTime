@@ -44,6 +44,7 @@ export interface Task {
   recurrence: Recurrence;
   done: boolean;
   completedAt: number | null;
+  steps?: { text: string; done: boolean }[]; // break a task into micro-steps
   realmId?: string; // household realm when assigned beyond yourself
   assignedTo?: string; // household member userId; absent + realmId = anyone
   createdAt: number;

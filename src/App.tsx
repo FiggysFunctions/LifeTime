@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { HashRouter, Routes, Route } from "react-router-dom";
 import { syncReminders } from "./reminders";
+import { FocusProvider } from "./focus";
 import Shell from "./components/Shell";
 import Home from "./pages/Home";
 import Lists from "./pages/Lists";
@@ -24,6 +25,7 @@ export default function App() {
 
   return (
     <HashRouter>
+      <FocusProvider>
       <Routes>
         <Route element={<Shell />}>
           <Route path="/" element={<Home />} />
@@ -41,6 +43,7 @@ export default function App() {
           <Route path="/settings" element={<Settings />} />
         </Route>
       </Routes>
+      </FocusProvider>
     </HashRouter>
   );
 }

@@ -1,11 +1,24 @@
 import { useState, type ReactNode } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Plus, Check, X, Repeat, Flag, CheckSquare, Users } from "lucide-react";
+import {
+  Plus,
+  Check,
+  X,
+  Repeat,
+  Flag,
+  CheckSquare,
+  Users,
+  Timer,
+  ListTree,
+  Dices,
+} from "lucide-react";
 import db, { uid, now, type Task, type Priority, type Recurrence } from "../db";
 import { todayStr, addDays, dueLabel } from "../dates";
 import { getHouseholdRealmId } from "../household";
 import { myName, notifyHousehold } from "../notify";
+import { useFocus } from "../focus";
+import { celebrate } from "../confetti";
 import {
   completeTask,
   PRIORITY_WEIGHT,
@@ -183,46 +196,149 @@ function NewTaskForm({
 }
 
 function TaskRow({ task, householdId }: { task: Task; householdId?: string }) {
+  const { open: openFocus } = useFocus();
+  const [expanded, setExpanded] = useState(false);
+  const [stepText, setStepText] = useState("");
   const overdue = !task.done && task.due !== null && task.due < todayStr();
+  const steps = task.steps ?? [];
+  const doneSteps = steps.filter((s) => s.done).length;
 
-  const complete = () => completeTask(task);
+  const complete = () => {
+    completeTask(task);
+    celebrate();
+  };
+
+  const addStep = () => {
+    if (!stepText.trim()) return;
+    db.tasks.update(task.id, {
+      steps: [...steps, { text: stepText.trim(), done: false }],
+      updatedAt: now(),
+    });
+    setStepText("");
+  };
+  const toggleStep = (i: number) => {
+    const next = steps.map((s, j) => (j === i ? { ...s, done: !s.done } : s));
+    if (next[i].done) celebrate();
+    db.tasks.update(task.id, { steps: next, updatedAt: now() });
+  };
 
   return (
-    <li className="group flex items-center gap-3 rounded-xl border border-line bg-surface px-3.5 py-3">
-      <button
-        onClick={complete}
-        aria-label={`Complete ${task.title}`}
-        className={`grid h-6 w-6 shrink-0 place-items-center rounded-full border-2 transition-colors hover:border-accent ${RING_COLOR[task.priority]}`}
-      />
-      <div className="min-w-0 flex-1">
-        <p className="break-words text-sm">{task.title}</p>
-        <p className="mt-0.5 flex items-center gap-2 text-xs">
-          <Flag size={11} className={FLAG_COLOR[task.priority]} />
-          {task.due && (
-            <span className={overdue ? "font-medium text-red-500 dark:text-red-400" : "text-muted"}>
-              {dueLabel(task.due)}
-            </span>
-          )}
-          {task.recurrence !== "none" && (
-            <span className="flex items-center gap-1 text-muted">
-              <Repeat size={11} /> {task.recurrence}
-            </span>
-          )}
-          {!!householdId && task.realmId === householdId && (
-            <span className="flex items-center gap-1 text-muted">
-              <Users size={11} />
-              {task.assignedTo ? task.assignedTo.split("@")[0] : "anyone"}
-            </span>
-          )}
-        </p>
+    <li className="group rounded-xl border border-line bg-surface px-3.5 py-3">
+      <div className="flex items-center gap-3">
+        <button
+          onClick={complete}
+          aria-label={`Complete ${task.title}`}
+          className={`grid h-6 w-6 shrink-0 place-items-center rounded-full border-2 transition-colors hover:border-accent ${RING_COLOR[task.priority]}`}
+        />
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="min-w-0 flex-1 text-left"
+        >
+          <p className="break-words text-sm">{task.title}</p>
+          <p className="mt-0.5 flex flex-wrap items-center gap-2 text-xs">
+            <Flag size={11} className={FLAG_COLOR[task.priority]} />
+            {task.due && (
+              <span className={overdue ? "font-medium text-red-500 dark:text-red-400" : "text-muted"}>
+                {dueLabel(task.due)}
+              </span>
+            )}
+            {task.recurrence !== "none" && (
+              <span className="flex items-center gap-1 text-muted">
+                <Repeat size={11} /> {task.recurrence}
+              </span>
+            )}
+            {steps.length > 0 && (
+              <span className="flex items-center gap-1 text-muted">
+                <ListTree size={11} /> {doneSteps}/{steps.length}
+              </span>
+            )}
+            {!!householdId && task.realmId === householdId && (
+              <span className="flex items-center gap-1 text-muted">
+                <Users size={11} />
+                {task.assignedTo ? task.assignedTo.split("@")[0] : "anyone"}
+              </span>
+            )}
+          </p>
+        </button>
+        <button
+          onClick={() => openFocus(task)}
+          aria-label={`Focus on ${task.title}`}
+          title="Focus"
+          className="p-1.5 text-muted transition-colors hover:text-accent"
+        >
+          <Timer size={17} />
+        </button>
+        <button
+          onClick={() => db.tasks.delete(task.id)}
+          aria-label={`Delete ${task.title}`}
+          className="p-1 text-muted opacity-60 transition-opacity hover:text-red-500 group-hover:opacity-100"
+        >
+          <X size={16} />
+        </button>
       </div>
-      <button
-        onClick={() => db.tasks.delete(task.id)}
-        aria-label={`Delete ${task.title}`}
-        className="p-1 text-muted opacity-60 transition-opacity hover:text-red-500 group-hover:opacity-100"
-      >
-        <X size={16} />
-      </button>
+
+      {expanded && (
+        <div className="mt-2.5 space-y-2 border-t border-line pt-2.5">
+          {steps.length > 0 && (
+            <ul className="space-y-1.5">
+              {steps.map((s, i) => (
+                <li key={i} className="group/step flex items-center gap-2.5">
+                  <button
+                    onClick={() => toggleStep(i)}
+                    aria-label={`${s.done ? "Uncheck" : "Check"} ${s.text}`}
+                    className={
+                      s.done
+                        ? "grid h-5 w-5 shrink-0 place-items-center rounded-full bg-accent text-white dark:text-bg"
+                        : "grid h-5 w-5 shrink-0 place-items-center rounded-full border-2 border-line hover:border-accent"
+                    }
+                  >
+                    {s.done && <Check size={12} strokeWidth={3} />}
+                  </button>
+                  <span
+                    className={`min-w-0 flex-1 break-words text-sm ${s.done ? "text-muted line-through" : ""}`}
+                  >
+                    {s.text}
+                  </span>
+                  <button
+                    onClick={() =>
+                      db.tasks.update(task.id, {
+                        steps: steps.filter((_, j) => j !== i),
+                        updatedAt: now(),
+                      })
+                    }
+                    aria-label={`Remove step ${s.text}`}
+                    className="p-1 text-muted opacity-0 transition-opacity hover:text-red-500 group-hover/step:opacity-100"
+                  >
+                    <X size={13} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="flex gap-2">
+            <input
+              value={stepText}
+              onChange={(e) => setStepText(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && addStep()}
+              placeholder="Break it into a smaller step…"
+              className="min-w-0 flex-1 rounded-xl border border-line bg-bg px-3.5 py-2 text-sm outline-none placeholder:text-muted focus:border-accent"
+            />
+            <button
+              onClick={addStep}
+              aria-label="Add step"
+              className="shrink-0 rounded-xl bg-accent-soft px-3 text-accent"
+            >
+              <Plus size={16} />
+            </button>
+          </div>
+          <button
+            onClick={() => openFocus(task)}
+            className="flex items-center gap-1.5 text-xs font-medium text-accent"
+          >
+            <Timer size={13} /> Focus on this
+          </button>
+        </div>
+      )}
     </li>
   );
 }
@@ -307,6 +423,7 @@ function Section({
 export default function Tasks() {
   // ?new=1 (from the app-icon shortcut) opens the form straight away
   const [params] = useSearchParams();
+  const { open: openFocus } = useFocus();
   const [creating, setCreating] = useState(params.get("new") === "1");
   const tasks = useLiveQuery(() => db.tasks.toArray(), []);
   const householdId = useLiveQuery(() => getHouseholdRealmId(), [], undefined);
@@ -346,6 +463,22 @@ export default function Tasks() {
     .filter((t) => t.done)
     .sort((a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0));
 
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const wins = (tasks ?? []).filter(
+    (t) => t.done && (t.completedAt ?? 0) >= startOfToday.getTime()
+  ).length;
+
+  // "Pick one for me" — take the decision away: prefer what's overdue or due
+  // today, and pick at random within that tier so it feels fresh, then drop
+  // straight into focus mode.
+  const pickOne = () => {
+    const urgent = [...overdue, ...dueToday];
+    const pool = urgent.length ? urgent : open;
+    if (pool.length === 0) return;
+    openFocus(pool[Math.floor(Math.random() * pool.length)]);
+  };
+
   return (
     <div className="space-y-5">
       <PageHeader
@@ -368,6 +501,32 @@ export default function Tasks() {
 
       {creating && (
         <NewTaskForm onDone={() => setCreating(false)} assignees={assignees} />
+      )}
+
+      {(open.length > 0 || wins > 0) && (
+        <div className="flex flex-wrap items-center gap-2">
+          {open.length > 0 && (
+            <>
+              <button
+                onClick={pickOne}
+                className="flex items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white dark:text-bg"
+              >
+                <Dices size={16} /> Pick one for me
+              </button>
+              <button
+                onClick={() => openFocus(null)}
+                className="flex items-center gap-1.5 rounded-full bg-surface-2 px-4 py-2 text-sm font-medium text-muted transition-colors hover:text-ink"
+              >
+                <Timer size={16} /> Focus timer
+              </button>
+            </>
+          )}
+          {wins > 0 && (
+            <span className="ml-auto text-xs font-medium text-accent">
+              🎉 {wins} done today
+            </span>
+          )}
+        </div>
       )}
 
       {tasks && tasks.length === 0 && !creating && (

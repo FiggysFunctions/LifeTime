@@ -33,6 +33,7 @@ import {
   PRIORITY_WEIGHT,
 } from "../actions";
 import { exportBackup } from "../backup";
+import { celebrate } from "../confetti";
 import { getHouseholdRealmId } from "../household";
 import { notifyEventAdded } from "../notify";
 import { fetchFeedEvents, type FeedEvent } from "../feed";
@@ -990,7 +991,10 @@ export default function Home() {
           {topTasks.map((t) => (
             <div key={t.id} className="flex items-center gap-3 px-4 py-3">
               <button
-                onClick={() => completeTask(t)}
+                onClick={() => {
+                  completeTask(t);
+                  celebrate();
+                }}
                 aria-label={`Complete ${t.title}`}
                 className={`grid h-6 w-6 shrink-0 place-items-center rounded-full border-2 transition-colors hover:border-accent ${PRIORITY_RING[t.priority]}`}
               />
