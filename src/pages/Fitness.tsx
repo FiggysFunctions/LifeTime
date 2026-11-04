@@ -24,6 +24,7 @@ import { todayStr, addDays } from "../dates";
 import { parseAmount, round2 } from "../money";
 import { useSettings, type Units } from "../settings";
 import { PageHeader, Card, Button, Chip } from "../components/ui";
+import { PushupTodayCard } from "./Pushups";
 
 // ---- units (everything is stored metric) ----
 const KG_PER_LB = 0.45359237;
@@ -1050,6 +1051,8 @@ export default function Fitness() {
   return (
     <div className="space-y-4">
       <PageHeader title="Fitness" subtitle="Move a little every day." />
+
+      <PushupTodayCard />
 
       <WeekCard activeDates={activeDates} manualToday={manualToday} />
 

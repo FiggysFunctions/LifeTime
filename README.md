@@ -68,6 +68,9 @@ From now on, any change committed to the GitHub repo redeploys automatically.
   with a visual Pomodoro timer, break tasks into tickable micro-steps,
   "Pick one for me" to beat decision paralysis, and a little confetti
   celebration (respecting reduced-motion) when you finish
+- **Phase 19 — Push-up challenge** ✅ a year-long daily max-reps challenge
+  in Fitness: log once a day, chart your progress, and get repeat nudges
+  through the day until it's logged (only on your own devices)
 
 ## Sync
 

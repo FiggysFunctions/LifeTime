@@ -39,6 +39,7 @@ import { notifyEventAdded } from "../notify";
 import { fetchFeedEvents, type FeedEvent } from "../feed";
 import { useSettings } from "../settings";
 import { PageHeader, Card, Button, Chip } from "../components/ui";
+import { PushupTodayCard } from "./Pushups";
 
 function greeting(h: number) {
   if (h < 5) return "Up late";
@@ -940,6 +941,8 @@ export default function Home() {
       <WeatherLine />
 
       {!settings.name && <NamePrompt />}
+
+      <PushupTodayCard quiet />
 
       {/* Today digest */}
       <div>

@@ -26,6 +26,7 @@ import {
   enableReminders,
   disableReminders,
   syncReminders,
+  stopPushupNudges,
   type ReminderStatus,
 } from "../reminders";
 import { PageHeader, Card, Button } from "../components/ui";
@@ -384,6 +385,7 @@ export default function Settings() {
   };
 
   const eraseAll = async () => {
+    stopPushupNudges();
     await Promise.all(
       db.tables.map((t) => t.clear()) // every store, including future ones
     );
@@ -576,7 +578,7 @@ export default function Settings() {
       </Card>
 
       <p className="pt-2 text-center text-xs text-muted">
-        Lifetime v1.4 · your whole life, one app
+        Lifetime v1.5 · your whole life, one app
       </p>
     </div>
   );

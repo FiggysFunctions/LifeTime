@@ -24,6 +24,8 @@ const TABLES = [
   "goals",
   "incomes",
   "accounts",
+  "pushupChallenges",
+  "pushupLogs",
 ] as const;
 
 const SETTINGS_KEY = "lifetime-settings";

@@ -9,11 +9,11 @@ export default async function handler(req, res) {
   const r = redis();
   if (!r) return res.status(503).json({ error: "storage-not-configured" });
 
-  const { fromDeviceId, toUsers, title, body, url } = req.body ?? {};
+  const { fromDeviceId, toUsers, toSelf, title, body, url } = req.body ?? {};
   if (
     typeof fromDeviceId !== "string" ||
     !fromDeviceId ||
-    !Array.isArray(toUsers) ||
+    !(Array.isArray(toUsers) || toSelf) ||
     typeof title !== "string" ||
     !title
   )
@@ -30,15 +30,33 @@ export default async function handler(req, res) {
     keys.privateKey
   );
 
-  const targets = new Set(
-    toUsers.slice(0, 10).map((u) => String(u).toLowerCase())
-  );
   const payload = JSON.stringify({
     title: String(title).slice(0, 120),
     body: String(body ?? "").slice(0, 160),
     tag: `hh-${Date.now()}`,
     url: typeof url === "string" && url.startsWith("/") ? url.slice(0, 64) : "/",
   });
+
+  // "Send me a test": proves this device can receive pushes, and reaches
+  // nobody else.
+  if (toSelf) {
+    if (!sender.subscription) return res.status(200).json({ ok: true, sent: 0 });
+    try {
+      await webpush.sendNotification(sender.subscription, payload, {
+        TTL: 600,
+        urgency: "high",
+      });
+      return res.status(200).json({ ok: true, sent: 1 });
+    } catch (err) {
+      if (err.statusCode === 404 || err.statusCode === 410)
+        await r.del(`device:${fromDeviceId}`);
+      return res.status(200).json({ ok: true, sent: 0 });
+    }
+  }
+
+  const targets = new Set(
+    toUsers.slice(0, 10).map((u) => String(u).toLowerCase())
+  );
 
   let sent = 0;
   let cursor = "0";

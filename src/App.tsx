@@ -10,6 +10,7 @@ import Tasks from "./pages/Tasks";
 import Calendar from "./pages/Calendar";
 import Budget from "./pages/Budget";
 import Fitness from "./pages/Fitness";
+import Pushups from "./pages/Pushups";
 import Sports from "./pages/Sports";
 import Meals from "./pages/Meals";
 import Notes from "./pages/Notes";
@@ -35,6 +36,7 @@ export default function App() {
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/budget" element={<Budget />} />
           <Route path="/fitness" element={<Fitness />} />
+          <Route path="/fitness/pushups" element={<Pushups />} />
           <Route path="/sports" element={<Sports />} />
           <Route path="/meals" element={<Meals />} />
           <Route path="/notes" element={<Notes />} />

@@ -165,10 +165,80 @@ export async function buildDigest() {
 if (import.meta.env.DEV)
   (window as unknown as { __buildDigest: unknown }).__buildDigest = buildDigest;
 
+const currentUser = () => {
+  const id = (db.cloud.currentUserId || "").toLowerCase();
+  return id && id !== "unauthorized" ? id : undefined;
+};
+
+// The push-up nudge schedule for the server, which decides when to send them
+// because it has to keep going on days the app is never opened.
+async function buildNag() {
+  const today = todayStr();
+  const challenge = (await db.pushupChallenges.toArray())
+    .filter((c) => c.endDate >= today)
+    .sort((a, b) => b.createdAt - a.createdAt)[0];
+  if (!challenge) return undefined;
+  const logged = (await db.pushupLogs.toArray())
+    .map((l) => l.date)
+    .filter((d) => d >= challenge.startDate && d <= challenge.endDate)
+    .sort();
+  return {
+    start: challenge.startDate,
+    end: challenge.endDate,
+    from: challenge.remindFrom,
+    to: challenge.remindTo,
+    everyMins: challenge.remindEveryMins,
+    tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    lastLogged: logged[logged.length - 1] ?? null,
+    updatedAt: challenge.updatedAt,
+  };
+}
+
+// Ends the nudges. Works even if reminders are off on this device, since the
+// schedule belongs to the account.
+export async function stopPushupNudges() {
+  try {
+    await fetch("/api/subscribe", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        deviceId: deviceId(),
+        userId: currentUser(),
+        nagStop: true,
+      }),
+    });
+  } catch {
+    // offline — the schedule still ends on its last day regardless
+  }
+}
+
+// Sends a real push to this device only, so it can be proved working before
+// the challenge starts.
+export async function sendTestNudge(): Promise<boolean> {
+  await syncReminders();
+  try {
+    const r = await fetch("/api/notify", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        fromDeviceId: deviceId(),
+        toSelf: true,
+        title: "💪 Push-ups not logged yet",
+        body: "This is a test. Your real nudges will look like this.",
+        url: "/#/fitness/pushups",
+      }),
+    });
+    if (!r.ok) return false;
+    return (await r.json()).sent > 0;
+  } catch {
+    return false;
+  }
+}
+
 // Upload the next 60 days of reminders (calendar events + bills). Called
 // on app start and whenever either changes; offline failures are silent —
 // the next call retries.
-export async function syncReminders() {
+export async function syncReminders(opts?: { resetLogged?: boolean }) {
   if (reminderStatus() !== "on") return;
   try {
     const sub = await getSubscription(false);
@@ -255,7 +325,7 @@ export async function syncReminders() {
       .sort((a, b) => a.at - b.at)
       .slice(0, 100);
 
-    const uidStr = (db.cloud.currentUserId || "").toLowerCase();
+    const nag = await buildNag();
     await fetch("/api/subscribe", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -264,7 +334,9 @@ export async function syncReminders() {
         subscription: sub.toJSON(),
         reminders,
         // ties this device to its account so household pushes can find it
-        userId: uidStr && uidStr !== "unauthorized" ? uidStr : undefined,
+        userId: currentUser(),
+        nag,
+        resetLogged: opts?.resetLogged,
       }),
     });
   } catch {

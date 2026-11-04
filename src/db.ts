@@ -81,6 +81,27 @@ export interface Expense {
   updatedAt: number;
 }
 
+// A personal challenge: never given a household realmId, so it stays in the
+// signed-in person's private realm and only their devices ever see it.
+export interface PushupChallenge {
+  id: string;
+  startDate: string; // local "YYYY-MM-DD", first day
+  endDate: string; // last day, inclusive
+  remindFrom: string; // "HH:MM" first nudge of the day
+  remindTo: string; // "HH:MM" last nudge of the day
+  remindEveryMins: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface PushupLog {
+  id: string;
+  date: string; // local "YYYY-MM-DD"
+  reps: number; // 0 = skipped that day (sick, injured) — stops the nudges
+  createdAt: number;
+  updatedAt: number;
+}
+
 export type IncomeFrequency = "weekly" | "fortnightly" | "monthly" | "yearly";
 
 export interface Income {
@@ -258,6 +279,8 @@ const db = new Dexie("lifetime", { addons: [dexieCloud] }) as Dexie & {
   goals: EntityTable<Goal, "id">;
   incomes: EntityTable<Income, "id">;
   accounts: EntityTable<Account, "id">;
+  pushupChallenges: EntityTable<PushupChallenge, "id">;
+  pushupLogs: EntityTable<PushupLog, "id">;
 };
 
 db.version(1).stores({
@@ -332,6 +355,12 @@ db.version(12).stores({
 db.version(13).stores({
   incomes: "id, createdAt",
   accounts: "id, createdAt",
+});
+
+// v14 — Phase 19: push-up challenge (personal).
+db.version(14).stores({
+  pushupChallenges: "id, createdAt",
+  pushupLogs: "id, date, createdAt",
 });
 
 // Sync is opt-in: without a database URL (or before signing in) the app

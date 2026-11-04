@@ -1,5 +1,6 @@
 import webpush from "web-push";
 import { redis } from "./_store.js";
+import { dueNudge } from "./_nag.js";
 
 // Called every few minutes by an external scheduler (e.g. cron-job.org).
 // Sends any reminders that have come due and prunes what was sent.
@@ -26,6 +27,7 @@ export default async function handler(req, res) {
   let devices = 0;
   let sent = 0;
   const errors = [];
+  const allDevices = []; // for routing push-up nudges by owner below
   let cursor = "0";
   do {
     const [next, batch] = await r.scan(cursor, { match: "device:*", count: 100 });
@@ -34,6 +36,7 @@ export default async function handler(req, res) {
       const rec = await r.get(key);
       if (!rec?.subscription) continue;
       devices++;
+      allDevices.push({ key, subscription: rec.subscription, userId: rec.userId });
       const all = Array.isArray(rec.reminders) ? rec.reminders : [];
       const due = all.filter((x) => x.at <= now && x.at > now - GRACE);
       const keep = all.filter((x) => x.at > now);
@@ -73,7 +76,53 @@ export default async function handler(req, res) {
     }
   } while (cursor !== "0");
 
-  const out = { ok: true, devices, sent };
+  // Push-up nudges: isolated so a problem here can never stop the reminders
+  // above from having been sent.
+  let nudges = 0;
+  try {
+    let nagCursor = "0";
+    do {
+      const [next, batch] = await r.scan(nagCursor, { match: "nag:*", count: 100 });
+      nagCursor = String(next);
+      for (const nagKey of batch) {
+        const nag = await r.get(nagKey);
+        if (!nag) continue;
+        const due = dueNudge(nag, now);
+        if (!due) continue;
+
+        // only this person's own devices, however many they have
+        const owner = nagKey.slice("nag:".length);
+        const targets = allDevices.filter(
+          (d) => d.userId === owner || d.key === owner
+        );
+        if (targets.length === 0) continue;
+
+        const slotKey = `nagslot:${owner}`;
+        if ((await r.get(slotKey)) === due.slotId) continue;
+        await r.set(slotKey, due.slotId, { ex: 172800 });
+
+        for (const d of targets) {
+          try {
+            // short TTL: a stale "not logged yet" must not arrive hours later
+            await webpush.sendNotification(
+              d.subscription,
+              JSON.stringify(due.payload),
+              { TTL: 1800, urgency: "high" }
+            );
+            nudges++;
+          } catch (err) {
+            if (err.statusCode === 404 || err.statusCode === 410)
+              await r.del(d.key);
+            else if (errors.length < 3) errors.push(String(err.message || err));
+          }
+        }
+      }
+    } while (nagCursor !== "0");
+  } catch (err) {
+    if (errors.length < 3) errors.push(String(err.message || err));
+  }
+
+  const out = { ok: true, devices, sent, nudges };
   if (errors.length) out.errors = errors;
   return res.status(200).json(out);
 }
